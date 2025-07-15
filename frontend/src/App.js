@@ -7,6 +7,7 @@ function App() {
   const [factor, setFactor] = useState('Easy');
   const [lastDate, setLastDate] = useState('');
   const [tasks, setTasks] = useState([]);
+  const [editingTaskId, setEditingTaskId] = useState(null);
 
   const fetchTasks = () => {
     axios.get('http://localhost:8000/api/tasks/')
@@ -20,16 +21,26 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const taskData = {
+      name : taskName,
+      factor : factor,
+      last_date : lastDate
+    };
+    
     try {
-      await axios.post('http://localhost:8000/api/tasks/', {
-        name: taskName,
-        factor: factor,
-        last_date: lastDate,
-      });
+      if(editingTaskId){
+        await axios.put(`http://localhost:8000/api/tasks/${editingTaskId}/`, taskData);
+      }
+      else {
+        await axios.post(`http://localhost:8000/api/tasks/`, taskData);
+      }
+
       setTaskName('');
       setFactor('Easy');
       setLastDate('');
-      fetchTasks(); // Refresh tasks after adding
+      setEditingTaskId(null);
+      fetchTasks(); // Refresh list
+
     } catch (error) {
       console.error('Error saving task:', error);
     }
@@ -62,11 +73,26 @@ function App() {
     }
   };
 
+  const handleEdit = (task) => {
+    setTaskName(task.name);
+    setFactor(task.factor);
+    setLastDate(task.last_date);
+    setEditingTaskId(task.id);
+  };
+
+
 
   return (
     <div className='screen-wrap'>
       <div className='form-card'>
-        <h2 className='add-heading'>Add a New Task</h2>
+        <h2 className='add-heading'>
+          {editingTaskId ? '✏️ Update Task' : 'Add a New Task'}
+        </h2>
+        {editingTaskId && (
+          <p className="edit-mode-notice">
+            Click "Update Task" to save or "Cancel" to discard.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className='task-form-horiz'>
           <div className='form-group'>
             <label>Task: </label>
@@ -99,8 +125,22 @@ function App() {
           </div>
           <div className='center-btn-row'>
             <button type="submit">
-              Add Task
+              {editingTaskId ? 'Update Task' : 'Add Task'}
             </button>
+            {editingTaskId && (
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => {
+                  setTaskName('');
+                  setFactor('Easy');
+                  setLastDate('');
+                  setEditingTaskId(null);
+                }}
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -134,15 +174,21 @@ function App() {
                 </td>
                 <td>({formatDate(task.last_date)})</td>
                 <td>
-                  <div className='tooltip-container'>
+                  <div className="action-buttons">
                     <button
-                      className='delete-btn'
-                      onClick={() => handleDelete(task.id)}
-                      aria-label="Delete Task"
+                      className="edit-btn"
+                      onClick={() => handleEdit(task)}
+                      title="Edit"
                     >
-                      <span role='img' aria-label='bin'>&#128465;</span>
+                      ✏️
                     </button>
-                    <div className='tooltip-text'>Delete</div>
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleDelete(task.id)}
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </td>
               </tr>
