@@ -1,4 +1,207 @@
-body {
+/* General page fade and reset */
+body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #f9fafb;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Main wrapper for vertical layout */
+.screen-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f9fafb;
+  width: 100vw;
+  box-sizing: border-box;
+}
+
+/* Form card at top: orange, curved, semi-compact */
+.form-card {
+  width: 92vw;
+  max-width: 520px;
+  min-height: 20vh;
+  max-height: 33vh;
+  background: linear-gradient(110deg,#ffa726 35%,#ffd180 100%);
+  margin-top: 36px;
+  border-radius: 24px;
+  box-shadow: 0 5px 24px #ffd08535;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px 24px 20px;
+  justify-content: center;
+}
+
+.form-card h2 {
+  margin-bottom: 17px;
+  font-size: 1.2em;
+  text-align: center;
+  color: #d57300;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Improved form layout & input sizing */
+.task-form {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.task-form label {
+  font-weight: 600;
+  color: #a85b00;
+  margin-bottom: 3px;
+}
+
+.task-form input,
+.task-form select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 13px;
+  border: 1.5px solid #ffd180;
+  border-radius: 11px;
+  font-size: 15.5px;
+  margin-top: 2px;
+  background: #fff9f1;
+  outline: none;
+  transition: border 0.18s;
+}
+.task-form input:focus,
+.task-form select:focus {
+  border-color: #ff9100;
+}
+
+.task-form button {
+  margin-top: 11px;
+  padding: 10px 0;
+  background: #ff8800;
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  border-radius: 9px;
+  font-size: 17px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px #ffedb2;
+  transition: background 0.18s;
+}
+.task-form button:hover {
+  background: #fb7300;
+}
+
+/* Task list card, visually distinct and clean */
+.tasks-card {
+  width: 92vw;
+  max-width: 670px;
+  background: #fffbe7;
+  margin: 34px auto 0 auto;
+  border-radius: 18px;
+  box-shadow: 0 2px 12px #ffe5a940;
+  padding: 28px 16px 17px 16px;
+  min-height: 18vh;
+}
+
+.tasks-card h2 {
+  margin-bottom: 13px;
+  font-size: 1.12em;
+  text-align: center;
+  color: #d57300;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+/* Table styling and colored pills for difficulty */
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  background: #fffdfa;
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow: 0 1px 10px #ffd99a20;
+  margin-top: 5px;
+}
+
+.task-table th, .task-table td {
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1.3px solid #ffe0b3;
+}
+
+.task-table th {
+  background: #ffe0b3;
+  color: #a85b00;
+  font-size: 15.5px;
+}
+
+.task-table tr:last-child td {
+  border-bottom: none;
+}
+
+.factor-box {
+  display: inline-block;
+  min-width: 65px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 16px;
+  padding: 2px 13px;
+  margin-right: 7px;
+  vertical-align: middle;
+  letter-spacing: 1px;
+}
+.factor-easy {
+  background: #44ba64;
+}
+.factor-medium {
+  background: #ff9f00;
+}
+.factor-hard {
+  background: #e04f32;
+}
+
+/* Responsive: fields and cards fit on small screens */
+@media (max-width: 700px) {
+  .form-card, .tasks-card {
+    width: 99vw;
+    max-width: 99vw;
+    margin: 0 auto 17px auto;
+    padding-left: 3vw;
+    padding-right: 3vw;
+    border-radius: 8vw;
+  }
+  .task-form, .task-table {
+    font-size: 13px;
+  }
+  .form-card {
+    margin-top: 17px;
+  }
+  .tasks-card {
+    margin-top: 15px;
+  }
+  .task-form input,
+  .task-form select {
+    font-size: 13.5px;
+    padding: 6px 9px;
+    border-radius: 7px;
+  }
+}
+
+@media (max-width: 420px) {
+  .form-card, .tasks-card {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+
+
+/* body {
   background: #f8fafc;
   font-family: 'Segoe UI', Arial, sans-serif;
 }
@@ -12,6 +215,31 @@ body {
   max-width: 640px;
   margin: 40px auto;
   box-shadow: 0 0 18px #ffe0b3;
+}
+
+.screen-wrap {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f9fafb;
+    padding: 0;
+}
+
+.form-card {
+    width: 90vw;
+    max-width: 520px;
+    min-height: 20vh;
+    max-height: 30vh;
+    background: linear-gradient(100deg,#ffa726 30%, #ffd180 100%);
+    margin-top: 34px;
+    border-radius: 22px;
+    box-shadow: 0 4px 16px #ffd08540;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 26px 18px 21px 18px;
+    justify-content: center;
 }
 
 h2 {
@@ -120,6 +348,11 @@ h2 {
 }
 
 @media (max-width: 660px) {
+  .form-card, .tasks-card {
+    max-width: 98vw;
+    padding-left: 3vw;
+    padding-right: 3vw;
+  }
   .central-content {
     max-width: 99vw;
     padding-left: 0;
@@ -155,5 +388,24 @@ h2 {
 }
 
 .task-form > div {
-    margin-bottom: 14px;
+    margin-bottom: 13px;
+    width: 100%;
 }
+
+.form-card h2, .tasks-card h2 {
+    text-align: center;
+    color: #de7200;
+    margin-bottom: 17px;
+    font-size: 1.3em;
+    font-weight: 700;
+}
+
+.tasks-card {
+    width: 93vw;
+    max-width: 660px;
+    background: #fffbe7;
+    margin: 35px auto 0 auto;
+    border-radius: 18px;
+    box-shadow: 0 2px 12px #ffefa640;
+    padding: 28px 16px 17px 16px;
+} */

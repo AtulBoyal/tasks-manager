@@ -55,9 +55,9 @@ function App() {
 
 
   return (
-    <div className='app-outer'>
-      <div className='central-content'>
-        <h2>Add a new task</h2>
+    <div className='screen-wrap'>
+      <div className='form-card'>
+        <h2>Add a New Task</h2>
         <form onSubmit={handleSubmit} className='task-form'>
           <div className='container'>
             <label>Task: </label><br/>
@@ -94,7 +94,7 @@ function App() {
         </form>
       </div>
 
-      <div className='container'>
+      <div className='tasks-card'>
         <h2>My Tasks</h2>
         <table className="task-table">
           <thead>
