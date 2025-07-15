@@ -53,23 +53,32 @@ function App() {
     return '';
   };
 
+  const handleDelete = async(id) => {
+    try {
+      await axios.delete(`http://localhost:8000/api/tasks/${id}/`);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task: ', error);
+    }
+  };
+
 
   return (
     <div className='screen-wrap'>
       <div className='form-card'>
-        <h2>Add a New Task</h2>
-        <form onSubmit={handleSubmit} className='task-form'>
-          <div className='container'>
-            <label>Task: </label><br/>
+        <h2 className='add-heading'>Add a New Task</h2>
+        <form onSubmit={handleSubmit} className='task-form-horiz'>
+          <div className='form-group'>
+            <label>Task: </label>
             <input
-            type = "text"
-            value={taskName}
-            onChange={e => setTaskName(e.target.value)}
-            required
+              type = "text"
+              value={taskName}
+              onChange={e => setTaskName(e.target.value)}
+              required
             />
           </div>
-          <div className='container'>
-            <label>Difficulty Factor:</label><br/>
+          <div className='form-group'>
+            <label>Factor:</label><br/>
             <select
               value = {factor}
               onChange={e => setFactor(e.target.value)}
@@ -79,23 +88,25 @@ function App() {
               <option value="Hard">Hard</option>
             </select>
           </div>
-          <div>
+          <div className='form-group'>
             <label>Last Date: </label>
             <input
-            type="date"
-            value={lastDate}
-            onChange={e => setLastDate(e.target.value)}
-            required
-            >
-            </input>
-            <br/>
-            <button type="submit">Add Task</button>
+              type="date"
+              value={lastDate}
+              onChange={e => setLastDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className='center-btn-row'>
+            <button type="submit">
+              Add Task
+            </button>
           </div>
         </form>
       </div>
 
-      <div className='tasks-card'>
-        <h2>My Tasks</h2>
+      <div className='tasks-card-wide'>
+        <h2 className='tasks-heading'>My Tasks</h2>
         <table className="task-table">
           <thead>
             <tr>
@@ -103,24 +114,37 @@ function App() {
               <th>Task</th>
               <th>Factor</th>
               <th>Last Date</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {tasks.length === 0 &&(
               <tr>
-                <td colSpan="3" style={{textAlign: 'center'}}>No tasks added.</td>
+                <td colSpan="5" style={{textAlign: 'center'}}>No tasks added.</td>
               </tr>     
             )}
             {tasks.map((task, idx) => (
               <tr key={task.id}>
-                <td>{idx+1}</td>
+                <td>{idx+1}.</td>
                 <td>{task.name}</td>
                 <td>
                   <span className={`factor-box ${getFactorClass(task.factor)}`}>
                     {task.factor}
-                  </span>{' '}
+                  </span>
                 </td>
-                <td>{formatDate(task.last_date)}</td>
+                <td>({formatDate(task.last_date)})</td>
+                <td>
+                  <div className='tooltip-container'>
+                    <button
+                      className='delete-btn'
+                      onClick={() => handleDelete(task.id)}
+                      aria-label="Delete Task"
+                    >
+                      <span role='img' aria-label='bin'>&#128465;</span>
+                    </button>
+                    <div className='tooltip-text'>Delete</div>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
