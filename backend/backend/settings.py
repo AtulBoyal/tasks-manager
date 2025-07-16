@@ -37,9 +37,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",         # (optional, for local dev)
 ]
 
-DATABASE_URL = postgresql://tasks_manager_db_lhll_user:0hD0rLDNahsqDPk2W7ADRXbB8GvoZYsT@dpg-d1rsl73e5dus73c5v2r0-a/tasks_manager_db_lhll
-
-
 import dj_database_url
 DATABASES = {
     'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
