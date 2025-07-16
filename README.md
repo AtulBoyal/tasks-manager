@@ -16,12 +16,12 @@ Whether it’s a critical meeting, an upcoming interview, or a hackathon, TaskMa
 
 **1. Clone the Repository:**
 
-    ```
-    git clone https://github.com/AtulBoyal/Tasks_Manager.git
-    ```
-    ```
-    cd Tasks_Manager
-    ```
+```
+git clone https://github.com/AtulBoyal/Tasks_Manager.git
+```
+```
+cd Tasks_Manager
+```
 
 **2. Start the Backend:**
 
