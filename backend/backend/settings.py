@@ -29,7 +29,7 @@ DEBUG = False
 ALLOWED_HOSTS = ['tasks-manager-jz2k.onrender.com']
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React dev server
+    "https://tasks-manager-coral.vercel.app/",  # React dev server
 ]
 
 import dj_database_url
