@@ -25,24 +25,24 @@ Whether it’s a critical meeting, an upcoming interview, or a hackathon, TaskMa
 
 **2. Start the Backend:**
 
-    ```
-    cd backend
-    ```
-    ```
-    python3 -m venv venv
-    ```
-    ```
-    source venv/bin/activate
-    ```
-    ```
-    pip install -r requirements.txt   # (Only if you haven't already)
-    ```
-    ```
-    python3 manage.py migrate
-    ```
-    ```
-    python3 manage.py runserver
-    ```
+```
+cd backend
+```
+```
+python3 -m venv venv
+```
+```
+source venv/bin/activate
+```
+```
+pip install -r requirements.txt   # (Only if you haven't already)
+```
+```
+python3 manage.py migrate
+```
+```
+python3 manage.py runserver
+```
 
 **3. Start the Frontend:**
 
