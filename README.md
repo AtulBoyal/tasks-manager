@@ -16,39 +16,45 @@ Whether it’s a critical meeting, an upcoming interview, or a hackathon, TaskMa
 
 **1. Clone the Repository:**
 
-```
-git clone https://github.com/AtulBoyal/Tasks_Manager.git
-```
-```
-cd Tasks_Manager
-```
+    ```
+    git clone https://github.com/AtulBoyal/Tasks_Manager.git
+    ```
+    ```
+    cd Tasks_Manager
+    ```
 
 **2. Start the Backend:**
 
-```
-cd backend
-```
-```
-python3 -m venv venv
-```
-```
-source venv/bin/activate
-```
-```
-pip install -r requirements.txt   # (Only if you haven't already)
-```
-```
-python3 manage.py migrate
-```
-```
-python3 manage.py runserver
-```
+    ```
+    cd backend
+    ```
+    ```
+    python3 -m venv venv
+    ```
+    ```
+    source venv/bin/activate
+    ```
+    ```
+    pip install -r requirements.txt   # (Only if you haven't already)
+    ```
+    ```
+    python3 manage.py migrate
+    ```
+    ```
+    python3 manage.py runserver
+    ```
 
 **3. Start the Frontend:**
 
-`cd ../frontend`
-`npm install`    # Only needed once
-`npm start`
+```
+cd ../frontend
+```
+```
+npm install    # Only needed once
+```
+```
+npm start
+```
 
 - Open [http://localhost:3000](http://localhost:3000) to view in your browser.
 - Leave the backend running in a separate terminal.
