@@ -97,7 +97,7 @@ function App() {
     return difficultyOrder[a.factor] - difficultyOrder[b.factor]; 
   });
 
-  const todayStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+  const todayDate = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
 
 
   return (
@@ -137,6 +137,7 @@ function App() {
             <input
               type="date"
               value={lastDate}
+              min = {todayDate}
               onChange={e => setLastDate(e.target.value)}
               required
             />
@@ -186,7 +187,7 @@ function App() {
                 <td>{idx+1}.</td>
                 <td>
                   <span 
-                    className={`task-name${task.last_date === todayStr ? ' deadline-today' : ''}`}>
+                    className={`task-name${task.last_date === todayDate ? ' deadline-today' : ''}`}>
                     {task.name}
                   </span>
                 </td>
