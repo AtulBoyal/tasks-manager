@@ -26,7 +26,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)qz4x#p_9bzr7g5o2f53-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['your-backend.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['tasks-manager-jz2k.onrender.com']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React dev server
