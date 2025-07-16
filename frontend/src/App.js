@@ -88,16 +88,44 @@ function App() {
   };
 
   // Sort tasks before rendering
-  const sortedTasks = [...tasks].sort((a,b) => {
-    const dateA = new Date(a.last_date);
-    const dateB = new Date(b.last_date);
-    if(dateA < dateB) return -1;
-    if(dateA > dateB) return 1;
-    // Same date: sort by factor
-    return difficultyOrder[a.factor] - difficultyOrder[b.factor]; 
-  });
+  const sortedTasks = [...tasks]
+    .filter(task => !task.completed)
+    .sort((a,b) =>{
+      const dateA = new Date(a.last_date);
+      const dateB = new Date(b.last_date);
+      if(dateA < dateB) return -1;
+      if(dateA > dateB) return 1;
+      // Same date: sort by factor
+      return difficultyOrder[a.factor] - difficultyOrder[b.factor];
+    });
 
   const todayDate = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+
+  const handleComplete = async(task) => {
+    try{
+      await axios.put(`http://localhost:8000/api/tasks/${task.id}/`, {
+        ...task,
+        completed: true
+      });
+      fetchTasks();
+    }
+    catch(error) {
+      console.error('Error completing task:', error);
+    }
+  };
+
+  const handleUndoComplete = async (task) => {
+    try {
+      await axios.put(`http://localhost:8000/api/tasks/${task.id}/`, {
+        ...task,
+        completed: false
+      });
+      fetchTasks();
+    } catch (error) {
+      console.error('Error undoing complete:', error);
+    }
+  };
+
 
 
   return (
@@ -213,6 +241,13 @@ function App() {
                     >
                       🗑️
                     </button>
+                    <button
+                      className="complete-btn"
+                      onClick={() => handleComplete(task)}
+                      title="Mark as Complete"
+                    >
+                      ✔️
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -220,6 +255,60 @@ function App() {
           </tbody>
         </table>
       </div>
+      {tasks.some(task => task.completed) && (
+        <div className='tasks-card-wide'>
+          <h2 className='tasks-heading'>Completed Tasks</h2>
+          <table className="task-table">
+            <thead>
+              <tr>
+                <th>S.No.</th>
+                <th>Task</th>
+                <th>Factor</th>
+                <th>Last Date</th>
+                <th>Completion Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...tasks]
+                .filter(task => task.completed)
+                .sort((a, b) => {
+                  const dateA = new Date(a.last_date);
+                  const dateB = new Date(b.last_date);
+                  if (dateA < dateB) return 1;
+                  if (dateA > dateB) return -1;
+                  return difficultyOrder[a.factor] - difficultyOrder[b.factor];
+                })
+                .map((task, idx) => (
+                  <tr key={task.id}>
+                    <td>{idx + 1}.</td>
+                    <td className="completed-task">✅ {task.name}</td>
+                    <td>
+                      <span className={`factor-box ${getFactorClass(task.factor)}`}>
+                        {task.factor}
+                      </span>
+                    </td>
+                    <td>{formatDate(task.last_date)}</td>
+                    <td>
+                      ({task.completion_date
+                        ? formatDate(task.completion_date)
+                        : ''})
+                    </td>
+                    <td>
+                      <button
+                        className="undo-btn"
+                        onClick={() => handleUndoComplete(task)}
+                        title="Mark as Incomplete"
+                      >
+                        ↩️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
