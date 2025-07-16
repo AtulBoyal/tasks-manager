@@ -26,10 +26,14 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)qz4x#p_9bzr7g5o2f53-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['tasks-manager-jz2k.onrender.com']
+ALLOWED_HOSTS = [
+    'onrender.com',
+    'localhost',
+    '127.0.0.1',
+]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://tasks-manager-coral.vercel.app/",  # React dev server
+    "https://tasks-manager-coral.vercel.app",  # React dev server
 ]
 
 import dj_database_url
