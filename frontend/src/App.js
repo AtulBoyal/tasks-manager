@@ -10,7 +10,7 @@ function App() {
   const [editingTaskId, setEditingTaskId] = useState(null);
 
   const fetchTasks = () => {
-    axios.get('http://localhost:8000/api/tasks/')
+    axios.get(`${process.env.REACT_APP_API_URL}api/tasks/`)
       .then(response => setTasks(response.data))
       .catch(error => console.error('Error fetching tasks:', error));
   };
@@ -29,10 +29,10 @@ function App() {
     
     try {
       if(editingTaskId){
-        await axios.put(`http://localhost:8000/api/tasks/${editingTaskId}/`, taskData);
+        await axios.put(`${process.env.REACT_APP_API_URL}api/tasks/${editingTaskId}/`, taskData);
       }
       else {
-        await axios.post(`http://localhost:8000/api/tasks/`, taskData);
+        await axios.post(`${process.env.REACT_APP_API_URL}api/tasks/`, taskData);
       }
 
       setTaskName('');
@@ -66,7 +66,7 @@ function App() {
 
   const handleDelete = async(id) => {
     try {
-      await axios.delete(`http://localhost:8000/api/tasks/${id}/`);
+      await axios.delete(`${process.env.REACT_APP_API_URL}api/tasks/${id}/`);
       fetchTasks();
     } catch (error) {
       console.error('Error deleting task: ', error);
@@ -103,7 +103,7 @@ function App() {
 
   const handleComplete = async(task) => {
     try{
-      await axios.put(`http://localhost:8000/api/tasks/${task.id}/`, {
+      await axios.put(`${process.env.REACT_APP_API_URL}api/tasks/${task.id}/`, {
         ...task,
         completed: true
       });
@@ -116,7 +116,7 @@ function App() {
 
   const handleUndoComplete = async (task) => {
     try {
-      await axios.put(`http://localhost:8000/api/tasks/${task.id}/`, {
+      await axios.put(`${process.env.REACT_APP_API_URL}api/tasks/${task.id}/`, {
         ...task,
         completed: false
       });
