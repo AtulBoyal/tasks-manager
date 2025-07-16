@@ -343,3 +343,9 @@ body, #root {
   margin-top: -10px;
   margin-bottom: 10px;
 }
+
+.task-name.deadline-today {
+  color: black;
+  font-weight: 700;
+}
+

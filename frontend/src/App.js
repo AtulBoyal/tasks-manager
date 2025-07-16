@@ -80,6 +80,24 @@ function App() {
     setEditingTaskId(task.id);
   };
 
+  // Helper function for difficulty order
+  const difficultyOrder = {
+    'Easy' : 1,
+    'Medium' : 2,
+    'Hard' : 3
+  };
+
+  // Sort tasks before rendering
+  const sortedTasks = [...tasks].sort((a,b) => {
+    const dateA = new Date(a.last_date);
+    const dateB = new Date(b.last_date);
+    if(dateA < dateB) return -1;
+    if(dateA > dateB) return 1;
+    // Same date: sort by factor
+    return difficultyOrder[a.factor] - difficultyOrder[b.factor]; 
+  });
+
+  const todayStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
 
 
   return (
@@ -158,15 +176,20 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {tasks.length === 0 &&(
+            {sortedTasks.length === 0 &&(
               <tr>
                 <td colSpan="5" style={{textAlign: 'center'}}>No tasks added.</td>
               </tr>     
             )}
-            {tasks.map((task, idx) => (
+            {sortedTasks.map((task, idx) => (
               <tr key={task.id}>
                 <td>{idx+1}.</td>
-                <td>{task.name}</td>
+                <td>
+                  <span 
+                    className={`task-name${task.last_date === todayStr ? ' deadline-today' : ''}`}>
+                    {task.name}
+                  </span>
+                </td>
                 <td>
                   <span className={`factor-box ${getFactorClass(task.factor)}`}>
                     {task.factor}
