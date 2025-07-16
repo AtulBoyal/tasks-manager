@@ -16,12 +16,16 @@ Whether it’s a critical meeting, an upcoming interview, or a hackathon, TaskMa
 
 **1. Clone the Repository:**
 
-`git clone https://github.com/AtulBoyal/Tasks_Manager.git`
-`cd Tasks_Manager`
+```
+git clone https://github.com/AtulBoyal/Tasks_Manager.git
+```
+```
+cd Tasks_Manager
+```
 
 **2. Start the Backend:**
 
-`cd backend`
+```cd backend```
 `python3 -m venv venv`
 `source venv/bin/activate`
 `pip install -r requirements.txt`   # (Only if you haven't already)
@@ -41,15 +45,18 @@ Whether it’s a critical meeting, an upcoming interview, or a hackathon, TaskMa
 
 - **Backend:**
   - Activate the virtual environment:
+
     ```
     source venv/bin/activate
     ```
   - Start the server:
+
     ```
     python3 manage.py runserver
     ```
 - **Frontend:**
   - Start React dev server:
+
     ```
     npm start
     ```
