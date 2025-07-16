@@ -33,8 +33,12 @@ ALLOWED_HOSTS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://tasks-manager-coral.vercel.app",  # React dev server
+    "https://tasks-manager-coral.vercel.app",
+    "http://localhost:3000",         # (optional, for local dev)
 ]
+
+DATABASE_URL = postgresql://tasks_manager_db_lhll_user:0hD0rLDNahsqDPk2W7ADRXbB8GvoZYsT@dpg-d1rsl73e5dus73c5v2r0-a/tasks_manager_db_lhll
+
 
 import dj_database_url
 DATABASES = {
@@ -92,12 +96,6 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 
 
 # Password validation
@@ -143,9 +141,3 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # for collectstatic command
-
-CORS_ALLOWED_ORIGINS = [
-    "https://your-project-name.vercel.app",
-    # You can keep localhost for development
-    "http://localhost:3000",
-]
