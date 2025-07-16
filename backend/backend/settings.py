@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)qz4x#p_9bzr7g5o2f53-
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    'onrender.com',
+    'tasks-manager-jz2k.onrender.com',
     'localhost',
     '127.0.0.1',
 ]
