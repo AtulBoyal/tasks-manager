@@ -146,15 +146,22 @@ function App() {
   return (
     <div>
       {!passwordOk ? (
-        <form onSubmit={handlePasswordSubmit}>
-          <input
-            type="password"
-            value={enteredPassword}
-            onChange={e => setEnteredPassword(e.target.value)}
-            placeholder="Enter password to view tasks"
-          />
-          <button type="submit">Unlock</button>
-        </form>
+        <div className="password-container">
+          <div className="password-box">
+            <h2>Enter Password to View Tasks</h2>
+            <form onSubmit={handlePasswordSubmit}>
+              <input
+                type="password"
+                className="password-input"
+                value={enteredPassword}
+                onChange={e => setEnteredPassword(e.target.value)}
+                placeholder="Password"
+                autoFocus
+              />
+              <button type="submit" className="unlock-button">Unlock</button>
+            </form>
+          </div>
+        </div>
       ) : (
         <div>
           <div className='screen-wrap'>
