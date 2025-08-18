@@ -10,7 +10,7 @@ function App() {
   const [editingTaskId, setEditingTaskId] = useState(null);
 
   const fetchTasks = () => {
-    axios.get(`${process.env.REACT_APP_API_URL}api/tasks/`)
+    axios.get(`${process.env.REACT_APP_API_URL}/api/tasks/`)
       .then(response => setTasks(response.data))
       .catch(error => console.error('Error fetching tasks:', error));
   };
