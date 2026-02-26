@@ -1,7 +1,7 @@
 const GITHUB_TOKEN = process.env.REACT_APP_GITHUB_TOKEN;
 const REPO_OWNER = "AtulBoyal";
 const REPO_NAME = "Tasks_Manager"; // 👈 Change this to your actual repo name
-const FILE_PATH = "tasks.json";
+const FILE_PATH = "data.json";
 const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
 
 const headers = {
