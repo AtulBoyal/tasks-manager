@@ -22,10 +22,9 @@ function App() {
     }
   };
 
-  const fetchTasks = () => {
-    axios.get(`${process.env.REACT_APP_API_URL}/api/tasks/`)
-      .then(response => setTasks(response.data))
-      .catch(error => console.error('Error fetching tasks:', error));
+  const fetchTasks = async () => {
+    const { tasks } = await githubStorage.getTasks();
+    setTasks(tasks || []);
   };
 
   useEffect(() => {
@@ -36,29 +35,28 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const taskData = {
-      name : taskName,
-      factor : factor,
-      last_date : lastDate
-    };
+    const { tasks: currentTasks, sha } = await githubStorage.getTasks();
     
-    try {
-      if(editingTaskId){
-        await axios.put(`${process.env.REACT_APP_API_URL}/api/tasks/${editingTaskId}/`, taskData);
-      }
-      else {
-        await axios.post(`${process.env.REACT_APP_API_URL}/api/tasks/`, taskData);
-      }
-
-      setTaskName('');
-      setFactor('Easy');
-      setLastDate('');
-      setEditingTaskId(null);
-      fetchTasks(); // Refresh list
-
-    } catch (error) {
-      console.error('Error saving task:', error);
+    let updatedTasks;
+    if (editingTaskId) {
+      updatedTasks = currentTasks.map(t => 
+        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate } : t
+      );
+    } else {
+      const newTask = {
+        id: Date.now(), // Generate a simple ID
+        name: taskName,
+        factor: factor,
+        last_date: lastDate,
+        completed: false
+      };
+      updatedTasks = [...currentTasks, newTask];
     }
+
+    await githubStorage.saveTasks(updatedTasks, sha);
+    // Reset states
+    setTaskName(''); setFactor('Easy'); setLastDate(''); setEditingTaskId(null);
+    fetchTasks();
   };
 
   // Helper for formatted date (ndd/mm/yyyy)
@@ -79,13 +77,11 @@ function App() {
     return '';
   };
 
-  const handleDelete = async(id) => {
-    try {
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/tasks/${id}/`);
-      fetchTasks();
-    } catch (error) {
-      console.error('Error deleting task: ', error);
-    }
+  const handleDelete = async (id) => {
+    const { tasks: currentTasks, sha } = await githubStorage.getTasks();
+    const updatedTasks = currentTasks.filter(t => t.id !== id);
+    await githubStorage.saveTasks(updatedTasks, sha);
+    fetchTasks();
   };
 
   const handleEdit = (task) => {
@@ -116,29 +112,30 @@ function App() {
 
   const todayDate = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
 
-  const handleComplete = async(task) => {
-    try{
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/tasks/${task.id}/`, {
-        ...task,
-        completed: true
-      });
-      fetchTasks();
-    }
-    catch(error) {
-      console.error('Error completing task:', error);
-    }
+  const handleComplete = async (task) => {
+    const { tasks: currentTasks, sha } = await githubStorage.getTasks();
+    
+    const updatedTasks = currentTasks.map(t => 
+      t.id === task.id 
+        ? { ...t, completed: true, completion_date: new Date().toISOString() } 
+        : t
+    );
+
+    await githubStorage.saveTasks(updatedTasks, sha);
+    fetchTasks();
   };
 
   const handleUndoComplete = async (task) => {
-    try {
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/tasks/${task.id}/`, {
-        ...task,
-        completed: false
-      });
-      fetchTasks();
-    } catch (error) {
-      console.error('Error undoing complete:', error);
-    }
+    const { tasks: currentTasks, sha } = await githubStorage.getTasks();
+    
+    const updatedTasks = currentTasks.map(t => 
+      t.id === task.id 
+        ? { ...t, completed: false, completion_date: null } 
+        : t
+    );
+
+    await githubStorage.saveTasks(updatedTasks, sha);
+    fetchTasks();
   };
 
 
