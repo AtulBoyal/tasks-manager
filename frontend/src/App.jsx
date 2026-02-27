@@ -112,6 +112,13 @@ function App() {
     }
   };
 
+  const handleEdit = (task) => {
+    setTaskName(task.name);
+    setFactor(task.factor);
+    setLastDate(task.last_date);
+    setEditingTaskId(task.id);
+  };
+
   const formatDate = (isoDate) => {
     if (!isoDate) return '';
     const date = new Date(isoDate);
