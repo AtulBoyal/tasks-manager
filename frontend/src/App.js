@@ -10,6 +10,7 @@ function App() {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [enteredPassword, setEnteredPassword] = useState('');
   const [passwordOk, setPasswordOk] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const correctPassword = process.env.REACT_APP_TASKS_PASSWORD;
 
@@ -35,28 +36,36 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { tasks: currentTasks, sha } = await githubStorage.getTasks();
-    
-    let updatedTasks;
-    if (editingTaskId) {
-      updatedTasks = currentTasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate } : t
-      );
-    } else {
-      const newTask = {
-        id: Date.now(), // Generate a simple ID
-        name: taskName,
-        factor: factor,
-        last_date: lastDate,
-        completed: false
-      };
-      updatedTasks = [...currentTasks, newTask];
-    }
+    setIsLoading(true);
 
-    await githubStorage.saveTasks(updatedTasks, sha);
-    // Reset states
-    setTaskName(''); setFactor('Easy'); setLastDate(''); setEditingTaskId(null);
-    fetchTasks();
+    try{
+      const { tasks: currentTasks, sha } = await githubStorage.getTasks();
+      
+      let updatedTasks;
+      if (editingTaskId) {
+        updatedTasks = currentTasks.map(t => 
+          t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate } : t
+        );
+      } else {
+        const newTask = {
+          id: Date.now(), // Generate a simple ID
+          name: taskName,
+          factor: factor,
+          last_date: lastDate,
+          completed: false
+        };
+        updatedTasks = [...currentTasks, newTask];
+      }
+
+      await githubStorage.saveTasks(updatedTasks, sha);
+      // Reset states
+      setTaskName(''); setFactor('Easy'); setLastDate(''); setEditingTaskId(null);
+      fetchTasks();
+    }catch (error) {
+      console.error('Error saving task:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Helper for formatted date (ndd/mm/yyyy)
@@ -203,8 +212,11 @@ function App() {
                 />
               </div>
               <div className='center-btn-row'>
-                <button type="submit">
-                  {editingTaskId ? 'Update Task' : 'Add Task'}
+                <button type="submit" disabled={isLoading} className={isLoading ? 'loading-btn' : ''}>
+                  {isLoading && <span className="spinner"></span>}
+                  {isLoading 
+                    ? (editingTaskId ? 'Updating...' : 'Saving...') 
+                    : (editingTaskId ? 'Update Task' : 'Add Task')}
                 </button>
                 {editingTaskId && (
                   <button
