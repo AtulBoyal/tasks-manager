@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { apiStorage } from './githubStorage';
 
 function App() {
@@ -28,20 +28,20 @@ function App() {
     }
   };
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const { tasks } = await apiStorage.getTasks(enteredPassword);
       setTasks(tasks || []);
     } catch (error) {
       console.error(error);
     }
-  };
+  }, [enteredPassword]);
 
   useEffect(() => {
     if (passwordOk) {
       fetchTasks();
     }
-  }, [passwordOk]);
+  }, [passwordOk, fetchTasks]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
