@@ -17,11 +17,26 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // --- DARK MODE STATE ---
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
   const fetchTasks = useCallback(async () => {
     try {
       const { tasks } = await apiStorage.getTasks(enteredPassword);
       setTasks(tasks || []);
-      setHasUnsavedChanges(false); // Reset unsaved status on fresh fetch
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error(error);
     }
@@ -46,26 +61,19 @@ function App() {
     }
   }, [passwordOk, fetchTasks]);
 
-  // --- PREVENT ACCIDENTAL CLOSURE WARNING ---
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges) {
-        // Standard way to trigger the browser's native leave warning
         e.preventDefault();
         e.returnValue = ''; 
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    // Cleanup function to remove the listener when the component unmounts
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [hasUnsavedChanges]);
 
-  // --- LOCAL MUTATION HELPERS ---
-  // These update React state instantly instead of calling the API
   const updateLocalTasks = (newTasks) => {
     setTasks(newTasks);
     setHasUnsavedChanges(true);
@@ -73,7 +81,6 @@ function App() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
     let updatedTasks;
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
@@ -90,7 +97,6 @@ function App() {
       };
       updatedTasks = [...tasks, newTask];
     }
-
     updateLocalTasks(updatedTasks);
     setTaskName(''); setFactor('Easy'); setLastDate(''); setTaskLinks([]); setEditingTaskId(null);
   };
@@ -118,12 +124,11 @@ function App() {
     updateLocalTasks(updatedTasks);
   };
 
-  // --- THE NEW SYNC FUNCTION ---
   const handleSyncToCloud = async () => {
     setIsSyncing(true);
     try {
       await apiStorage.saveTasks(tasks, enteredPassword);
-      setHasUnsavedChanges(false); // Mark as safely stored!
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error syncing tasks:', error);
       alert('Failed to sync. Please try again.');
@@ -136,7 +141,7 @@ function App() {
     setTaskName(task.name);
     setFactor(task.factor);
     setLastDate(task.last_date);
-    setTaskLinks(task.links || []); // If old task has no links, default to empty array!
+    setTaskLinks(task.links || []);
     setEditingTaskId(task.id);
   };
 
@@ -170,20 +175,20 @@ function App() {
 
   const todayDate = new Date().toISOString().split('T')[0];
 
-  const inputStyles = "px-[13px] py-[8px] rounded-[9px] border-[1.2px] border-[#ffd180] bg-[#fff9f2] min-w-[135px] text-[1em] outline-none transition-colors shadow-[inset_0_1px_4px_#fff6ed80] focus:border-[#ffb935] focus:bg-[#fffbf1]";
-  const thStyles = "py-[10px] px-[9px] bg-[#ffe6ba] text-[#b06d0e] text-[15.5px] font-[750] border-b-[2px] border-b-[#ffd59e] last:pr-0";
-  const tdStyles = "py-[10px] px-[8px] border-b-[1.2px] border-b-[#ffe0b0] text-center group-last:border-b-0";
+  const inputStyles = "px-[13px] py-[8px] rounded-[9px] border-[1.2px] border-[#ffd180] dark:border-slate-600 bg-[#fff9f2] dark:bg-slate-700 min-w-[135px] text-[1em] text-black dark:text-white outline-none transition-colors shadow-[inset_0_1px_4px_#fff6ed80] focus:border-[#ffb935] focus:dark:border-orange-400 focus:bg-[#fffbf1] focus:dark:bg-slate-600";
+  const thStyles = "py-[10px] px-[9px] bg-[#ffe6ba] dark:bg-slate-800 text-[#b06d0e] dark:text-orange-400 text-[15.5px] font-[750] border-b-[2px] border-b-[#ffd59e] dark:border-b-slate-700 last:pr-0";
+  const tdStyles = "py-[10px] px-[8px] border-b-[1.2px] border-b-[#ffe0b0] dark:border-b-slate-700 text-center group-last:border-b-0 text-black dark:text-slate-200";
 
   return (
-    <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)]">
+    <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300">
       {!passwordOk ? (
         <div className="flex flex-col items-center justify-center h-[80vh]">
-          <div className="bg-[#fff8e1] py-[2rem] px-[3rem] rounded-[12px] shadow-[0_8px_16px_rgba(0,0,0,0.2)] w-[320px] text-center">
+          <div className="bg-[#fff8e1] dark:bg-slate-800 py-[2rem] px-[3rem] rounded-[12px] shadow-[0_8px_16px_rgba(0,0,0,0.2)] w-[320px] text-center transition-colors">
             <h2 className="mb-[1.2rem] text-[#f57c00] font-semibold text-xl">Enter Password to View Tasks</h2>
             <form onSubmit={handlePasswordSubmit}>
               <input
                 type="password"
-                className="w-full p-[0.7rem] text-[1rem] border-[2px] border-[#f57c00] rounded-[8px] mb-[1rem] outline-offset-2 outline-none transition-colors focus:border-[#ef6c00]"
+                className="w-full p-[0.7rem] text-[1rem] border-[2px] border-[#f57c00] rounded-[8px] mb-[1rem] outline-none transition-colors focus:border-[#ef6c00] dark:bg-slate-700 dark:text-white dark:border-slate-600"
                 value={enteredPassword}
                 onChange={e => setEnteredPassword(e.target.value)}
                 placeholder="Password"
@@ -199,38 +204,47 @@ function App() {
         <div>
           <div className="min-h-screen flex flex-col items-center w-screen">
             
-            {/* --- SYNC HEADER COMPONENT --- */}
             <div className="w-[92vw] max-w-[900px] flex justify-between items-center mt-[20px] mb-[10px] px-[10px]">
               <div className="flex items-center gap-2">
                 <span className={`h-3 w-3 rounded-full ${hasUnsavedChanges ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></span>
-                <span className="font-semibold text-[#c57415]">
+                <span className="font-semibold text-[#c57415] dark:text-orange-400">
                   {hasUnsavedChanges ? 'Unsaved Local Changes' : 'All Data Synced'}
                 </span>
               </div>
               
-              <button 
-                onClick={handleSyncToCloud}
-                disabled={!hasUnsavedChanges || isSyncing}
-                className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-white shadow-md transition-all 
-                  ${!hasUnsavedChanges ? 'bg-gray-400 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'}`}
-              >
-                {isSyncing && <span className="animate-spin inline-block w-[14px] h-[14px] border-[2px] border-[rgba(255,255,255,0.3)] border-t-white rounded-full"></span>}
-                {isSyncing ? 'Syncing to Cloud...' : '☁️ Sync to Cloud'}
-              </button>
-            </div>
-            {/* --------------------------- */}
+              <div className="flex gap-4 items-center">
+                <button
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="p-2 text-[1.2rem] rounded-full bg-[#ffe6ba] dark:bg-slate-700 hover:bg-[#ffd59e] dark:hover:bg-slate-600 transition-colors shadow-sm"
+                  title="Toggle Dark Mode"
+                >
+                  {isDarkMode ? '☀️' : '🌙'}
+                </button>
 
-            <div className="w-[92vw] max-w-[512px] rounded-[21px] mb-[29px] shadow-[0_7px_36px_#ff944740] px-[28px] pt-[34px] pb-[24px] backdrop-blur-[2.5px] bg-[linear-gradient(107deg,#ffd59e_58%,#ffe7cc_100%)]">
-              <h2 className="text-center font-extrabold text-[2rem] mb-[22px] text-[#cc6000] tracking-[1px]">
+                <button 
+                  onClick={handleSyncToCloud}
+                  disabled={!hasUnsavedChanges || isSyncing}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-white shadow-md transition-all 
+                    ${!hasUnsavedChanges ? 'bg-gray-400 dark:bg-slate-600 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'}`}
+                >
+                  {isSyncing && <span className="animate-spin inline-block w-[14px] h-[14px] border-[2px] border-[rgba(255,255,255,0.3)] border-t-white rounded-full"></span>}
+                  {isSyncing ? 'Syncing...' : '☁️ Sync to Cloud'}
+                </button>
+              </div>
+            </div>
+
+            {/* FORM CARD - Now with proper Dark Mode classes! */}
+            <div className="w-[92vw] max-w-[512px] rounded-[21px] mb-[29px] shadow-[0_7px_36px_#ff944740] dark:shadow-none px-[28px] pt-[34px] pb-[24px] backdrop-blur-[2.5px] bg-[linear-gradient(107deg,#ffd59e_58%,#ffe7cc_100%)] dark:bg-none dark:bg-slate-800 dark:border dark:border-slate-700 transition-colors duration-300">
+              <h2 className="text-center font-extrabold text-[2rem] mb-[22px] text-[#cc6000] dark:text-orange-500 tracking-[1px]">
                 {editingTaskId ? '✏️ Update Task' : 'Add a New Task'}
               </h2>
               <form onSubmit={handleSubmit} className="flex flex-wrap gap-y-[14px] gap-x-[22px] items-center justify-center flex-row">
                 <div className="flex items-center gap-[9px]">
-                  <label className="min-w-[62px] font-semibold text-[#bf6700]">Task: </label>
+                  <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400">Task: </label>
                   <input type="text" className={inputStyles} value={taskName} onChange={e => setTaskName(e.target.value)} required />
                 </div>
                 <div className="flex items-center gap-[9px]">
-                  <label className="min-w-[62px] font-semibold text-[#bf6700]">Factor:</label><br/>
+                  <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400">Factor:</label><br/>
                   <select className={inputStyles} value={factor} onChange={e => setFactor(e.target.value)}>
                     <option value="Easy">Easy</option>
                     <option value="Medium">Medium</option>
@@ -238,17 +252,17 @@ function App() {
                   </select>
                 </div>
                 <div className="flex items-center gap-[9px]">
-                  <label className="min-w-[62px] font-semibold text-[#bf6700]">Last Date: </label>
+                  <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400">Last Date: </label>
                   <input type="date" className={inputStyles} value={lastDate} min={todayDate} onChange={e => setLastDate(e.target.value)} required />
                 </div>
-                {/* Add this right below the Last Date div, but before the Submit button div */}
+                
                 <div className="w-full flex flex-col gap-[10px] mt-[5px]">
                   <div className="flex justify-between items-center px-1">
-                    <label className="font-semibold text-[#bf6700]">Resources / Links (Optional):</label>
+                    <label className="font-semibold text-[#bf6700] dark:text-orange-400">Resources / Links (Optional):</label>
                     <button 
                       type="button" 
                       onClick={() => setTaskLinks([...taskLinks, { title: '', url: '' }])}
-                      className="text-[0.85em] bg-[#ffe6ba] text-[#b06d0e] px-[10px] py-[3px] rounded-[6px] font-bold transition-colors hover:bg-[#ffd59e]"
+                      className="text-[0.85em] bg-[#ffe6ba] dark:bg-slate-700 text-[#b06d0e] dark:text-orange-400 px-[10px] py-[3px] rounded-[6px] font-bold transition-colors hover:bg-[#ffd59e] dark:hover:bg-slate-600"
                     >
                       + Add Link
                     </button>
@@ -294,7 +308,7 @@ function App() {
                     {editingTaskId ? 'Update Task' : 'Add Task'}
                   </button>
                   {editingTaskId && (
-                    <button type="button" className="bg-[#f3f3f3] border-none rounded-[8px] px-[16px] py-[8px] ml-[12px] text-[1em] font-medium text-[#333] cursor-pointer transition-colors hover:bg-[#e0e0e0]" onClick={() => { setTaskName(''); setFactor('Easy'); setLastDate(''); setEditingTaskId(null); }}>
+                    <button type="button" className="bg-[#f3f3f3] dark:bg-slate-700 border-none rounded-[8px] px-[16px] py-[8px] ml-[12px] text-[1em] font-medium text-[#333] dark:text-white cursor-pointer transition-colors hover:bg-[#e0e0e0] dark:hover:bg-slate-600" onClick={() => { setTaskName(''); setFactor('Easy'); setLastDate(''); setEditingTaskId(null); }}>
                       Cancel
                     </button>
                   )}
@@ -302,9 +316,10 @@ function App() {
               </form>
             </div>
 
-            <div className="w-[99vw] max-w-[900px] mx-auto rounded-[18px] shadow-[0_2px_14px_#ffe5a940] bg-[#fffbe7] pt-[28px] px-[18px] pb-[22px]">
-              <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] mb-[13px]">My Tasks</h2>
-              <table className="w-full border-separate border-spacing-0 mt-[8px] rounded-[12px] shadow-[0_1px_10px_#ffd99a10] bg-[#fffdfa]">
+            {/* MY TASKS CARD - Now with proper Dark Mode classes! */}
+            <div className="w-[99vw] max-w-[900px] mx-auto rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[18px] pb-[22px] transition-colors duration-300">
+              <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px]">My Tasks</h2>
+              <table className="w-full border-separate border-spacing-0 mt-[8px] rounded-[12px] shadow-[0_1px_10px_#ffd99a10] dark:shadow-none bg-[#fffdfa] dark:bg-slate-900 transition-colors duration-300 overflow-hidden">
                 <thead>
                   <tr>
                     <th className={thStyles}>S.No.</th>
@@ -316,26 +331,24 @@ function App() {
                 </thead>
                 <tbody>
                   {sortedTasks.length === 0 &&(
-                    <tr><td colSpan="5" className="py-[10px] px-[8px] text-center">No tasks added.</td></tr>     
+                    <tr><td colSpan="5" className="py-[10px] px-[8px] text-center dark:text-slate-400">No tasks added.</td></tr>     
                   )}
                   {sortedTasks.map((task, idx) => (
                     <tr key={task.id} className="group">
                       <td className={tdStyles}>{idx+1}.</td>
                       <td className={tdStyles}>
                         <div className="flex items-center justify-center gap-2">
-                          <span className={task.last_date === todayDate ? 'text-black font-bold' : ''}>
+                          <span className={task.last_date === todayDate ? 'text-black dark:text-white font-bold' : 'text-black dark:text-slate-200'}>
                             {task.name}
                           </span>
                           
-                          {/* If links exist and there is at least 1, render the tooltip icon */}
                           {task.links && task.links.length > 0 && (
-                            <div className="relative group inline-block align-middle cursor-help">
-                              <span className="text-[0.8em] bg-[#e8f0fe] text-[#065fd4] px-[6px] py-[2px] rounded-full font-bold border border-[#a4c2f4]">
+                            <div className="relative group/tooltip inline-block align-middle cursor-help">
+                              <span className="text-[0.8em] bg-[#e8f0fe] dark:bg-slate-700 text-[#065fd4] dark:text-blue-400 px-[6px] py-[2px] rounded-full font-bold border border-[#a4c2f4] dark:border-slate-600">
                                 🔗 {task.links.length}
                               </span>
                               
-                              {/* The Tooltip Box (Hidden by default, flex on hover) */}
-                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[8px] hidden group-hover:flex flex-col gap-[6px] bg-[#333] text-white text-[13px] rounded-[8px] p-[10px] z-10 w-max max-w-[250px] shadow-lg">
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[8px] hidden group-hover/tooltip:flex flex-col gap-[6px] bg-[#333] dark:bg-black text-white text-[13px] rounded-[8px] p-[10px] z-10 w-max max-w-[250px] shadow-lg">
                                 {task.links.map((link, i) => (
                                   <a 
                                     key={i} 
@@ -347,8 +360,7 @@ function App() {
                                     • {link.title || 'Link'}
                                   </a>
                                 ))}
-                                {/* The little CSS triangle pointing down */}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-[#333]"></div>
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-[#333] dark:border-t-black"></div>
                               </div>
                             </div>
                           )}
@@ -358,9 +370,9 @@ function App() {
                       <td className={tdStyles}>({formatDate(task.last_date)})</td>
                       <td className={tdStyles}>
                         <div className="flex gap-[10px] justify-center">
-                          <button className="bg-transparent border-none text-[#065fd4] text-[1.15em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe]" onClick={() => handleEdit(task)} title="Edit">✏️</button>
-                          <button className="bg-transparent border-none text-[#e34d4d] text-[1.2em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#be2323] hover:bg-[#fff0f0]" onClick={() => handleDelete(task.id)} title="Delete">🗑️</button>
-                          <button className="bg-transparent border-none text-[#2e7d32] text-[1.25em] cursor-pointer py-[3px] px-[5px] transition-colors rounded-[6px] hover:text-[#0d540d] hover:bg-[#e8f5e9]" onClick={() => handleComplete(task)} title="Mark as Complete">✔️</button>
+                          <button className="bg-transparent border-none text-[#065fd4] dark:text-blue-400 text-[1.15em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe] dark:hover:bg-slate-700" onClick={() => handleEdit(task)} title="Edit">✏️</button>
+                          <button className="bg-transparent border-none text-[#e34d4d] text-[1.2em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#be2323] hover:bg-[#fff0f0] dark:hover:bg-slate-700" onClick={() => handleDelete(task.id)} title="Delete">🗑️</button>
+                          <button className="bg-transparent border-none text-[#2e7d32] dark:text-green-500 text-[1.25em] cursor-pointer py-[3px] px-[5px] transition-colors rounded-[6px] hover:text-[#0d540d] hover:bg-[#e8f5e9] dark:hover:bg-slate-700" onClick={() => handleComplete(task)} title="Mark as Complete">✔️</button>
                         </div>
                       </td>
                     </tr>
@@ -369,10 +381,11 @@ function App() {
               </table>
             </div>
             
+            {/* COMPLETED TASKS CARD - Now with proper Dark Mode classes! */}
             {tasks.some(task => task.completed) && (
-              <div className="w-[99vw] max-w-[900px] mx-auto mt-[34px] rounded-[18px] shadow-[0_2px_14px_#ffe5a940] bg-[#fffbe7] pt-[28px] px-[18px] pb-[22px] mb-[40px]">
-                <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] mb-[13px]">Completed Tasks</h2>
-                <table className="w-full border-separate border-spacing-0 mt-[8px] rounded-[12px] shadow-[0_1px_10px_#ffd99a10] bg-[#fffdfa]">
+              <div className="w-[99vw] max-w-[900px] mx-auto mt-[34px] rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[18px] pb-[22px] mb-[40px] transition-colors duration-300">
+                <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px]">Completed Tasks</h2>
+                <table className="w-full border-separate border-spacing-0 mt-[8px] rounded-[12px] shadow-[0_1px_10px_#ffd99a10] dark:shadow-none bg-[#fffdfa] dark:bg-slate-900 transition-colors duration-300 overflow-hidden">
                   <thead>
                     <tr>
                       <th className={thStyles}>S.No.</th>
@@ -396,12 +409,12 @@ function App() {
                       .map((task, idx) => (
                         <tr key={task.id} className="group">
                           <td className={tdStyles}>{idx + 1}.</td>
-                          <td className={`${tdStyles} text-[#888]`}>✅ {task.name}</td>
+                          <td className={`${tdStyles} text-[#888] dark:text-slate-500`}>✅ {task.name}</td>
                           <td className={tdStyles}><span className={`inline-block min-w-[71px] text-[.96em] font-bold text-white rounded-[16px] py-[3px] px-[17px] mr-[7px] tracking-[1px] align-middle ${getFactorClass(task.factor)}`}>{task.factor}</span></td>
                           <td className={tdStyles}>{formatDate(task.last_date)}</td>
                           <td className={tdStyles}>({task.completion_date ? formatDate(task.completion_date) : ''})</td>
                           <td className={tdStyles}>
-                            <button className="bg-transparent border-none text-[1.15em] cursor-pointer py-[2px] px-[5px] text-[#f89c0e] hover:text-[#d37800]" onClick={() => handleUndoComplete(task)} title="Mark as Incomplete">↩️</button>
+                            <button className="bg-transparent border-none text-[1.15em] cursor-pointer py-[2px] px-[5px] text-[#f89c0e] hover:text-[#d37800] dark:hover:bg-slate-700 rounded transition-colors" onClick={() => handleUndoComplete(task)} title="Mark as Incomplete">↩️</button>
                           </td>
                         </tr>
                       ))}
