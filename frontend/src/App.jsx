@@ -63,7 +63,7 @@ function App() {
       if (unsavedFlag) {
         const cached = localStorage.getItem('task_manager_cache');
         if (cached) {
-          const { updated, hasLegacy } = migrateLegacyTasks(JSON.parse(cached));
+          const { updated } = migrateLegacyTasks(JSON.parse(cached));
           setTasks(updated);
           setHasUnsavedChanges(true); // Keep unsaved status true
           return; 
