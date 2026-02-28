@@ -45,6 +45,24 @@ function App() {
     }
   }, [passwordOk, fetchTasks]);
 
+  // --- PREVENT ACCIDENTAL CLOSURE WARNING ---
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        // Standard way to trigger the browser's native leave warning
+        e.preventDefault();
+        e.returnValue = ''; 
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup function to remove the listener when the component unmounts
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
   // --- LOCAL MUTATION HELPERS ---
   // These update React state instantly instead of calling the API
   const updateLocalTasks = (newTasks) => {
