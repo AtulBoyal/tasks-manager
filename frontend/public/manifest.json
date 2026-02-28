@@ -1,6 +1,6 @@
 {
-  "short_name": "Tasks",
-  "name": "My Task Manager",
+  "short_name": "Task Manager",
+  "name": "Task Manager",
   "icons": [
     {
       "src": "favicon.ico",
