@@ -17,6 +17,10 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // --- SEARCH & FILTER STATES ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterFactor, setFilterFactor] = useState('All');
+
   // --- DARK MODE STATE ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
@@ -162,9 +166,21 @@ function App() {
   };
 
   const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
+  const todayDate = new Date().toISOString().split('T')[0];
 
-  const sortedTasks = [...tasks]
+  // --- FILTERING & SORTING LOGIC ---
+  const matchesSearchAndFilter = (task) => {
+    const query = searchQuery.toLowerCase();
+    const matchesFactor = filterFactor === 'All' || task.factor === filterFactor;
+    const matchesName = task.name.toLowerCase().includes(query);
+    const matchesLinks = task.links ? task.links.some(l => (l.title || '').toLowerCase().includes(query)) : false;
+    
+    return matchesFactor && (matchesName || matchesLinks);
+  };
+
+  const filteredActiveTasks = [...tasks]
     .filter(task => !task.completed)
+    .filter(matchesSearchAndFilter)
     .sort((a,b) =>{
       const dateA = new Date(a.last_date);
       const dateB = new Date(b.last_date);
@@ -173,14 +189,23 @@ function App() {
       return difficultyOrder[a.factor] - difficultyOrder[b.factor];
     });
 
-  const todayDate = new Date().toISOString().split('T')[0];
+  const filteredCompletedTasks = [...tasks]
+    .filter(task => task.completed)
+    .filter(matchesSearchAndFilter)
+    .sort((a, b) => {
+      const dateA = new Date(a.last_date);
+      const dateB = new Date(b.last_date);
+      if (dateA < dateB) return 1;
+      if (dateA > dateB) return -1;
+      return difficultyOrder[a.factor] - difficultyOrder[b.factor];
+    });
 
   const inputStyles = "px-[13px] py-[8px] rounded-[9px] border-[1.2px] border-[#ffd180] dark:border-slate-600 bg-[#fff9f2] dark:bg-slate-700 min-w-[135px] text-[1em] text-black dark:text-white outline-none transition-colors shadow-[inset_0_1px_4px_#fff6ed80] focus:border-[#ffb935] focus:dark:border-orange-400 focus:bg-[#fffbf1] focus:dark:bg-slate-600";
   const thStyles = "py-[10px] px-[9px] bg-[#ffe6ba] dark:bg-slate-800 text-[#b06d0e] dark:text-orange-400 text-[15.5px] font-[750] border-b-[2px] border-b-[#ffd59e] dark:border-b-slate-700 last:pr-0";
   const tdStyles = "py-[10px] px-[8px] border-b-[1.2px] border-b-[#ffe0b0] dark:border-b-slate-700 text-center group-last:border-b-0 text-black dark:text-slate-200";
 
   return (
-    <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300">
+    <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300 pb-[40px]">
       {!passwordOk ? (
         <div className="flex flex-col items-center justify-center h-[80vh]">
           <div className="bg-[#fff8e1] dark:bg-slate-800 py-[2rem] px-[3rem] rounded-[12px] shadow-[0_8px_16px_rgba(0,0,0,0.2)] w-[320px] text-center transition-colors">
@@ -233,7 +258,6 @@ function App() {
               </div>
             </div>
 
-            {/* FORM CARD - Now with proper Dark Mode classes! */}
             <div className="w-[92vw] max-w-[512px] rounded-[21px] mb-[29px] shadow-[0_7px_36px_#ff944740] dark:shadow-none px-[28px] pt-[34px] pb-[24px] backdrop-blur-[2.5px] bg-[linear-gradient(107deg,#ffd59e_58%,#ffe7cc_100%)] dark:bg-none dark:bg-slate-800 dark:border dark:border-slate-700 transition-colors duration-300">
               <h2 className="text-center font-extrabold text-[2rem] mb-[22px] text-[#cc6000] dark:text-orange-500 tracking-[1px]">
                 {editingTaskId ? '✏️ Update Task' : 'Add a New Task'}
@@ -316,8 +340,34 @@ function App() {
               </form>
             </div>
 
-            {/* MY TASKS CARD - Now with proper Dark Mode classes! */}
             <div className="w-[99vw] max-w-[900px] mx-auto rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[18px] pb-[22px] transition-colors duration-300">
+              
+              {/* --- SEARCH AND FILTER CONTROLS --- */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 mt-2">
+                <div className="relative w-full sm:w-2/3">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                  <input 
+                    type="text" 
+                    placeholder="Search tasks or links..." 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className={`${inputStyles} w-full pl-10`}
+                  />
+                </div>
+                <div className="w-full sm:w-1/3">
+                  <select 
+                    value={filterFactor} 
+                    onChange={e => setFilterFactor(e.target.value)}
+                    className={`${inputStyles} w-full`}
+                  >
+                    <option value="All">All Factors</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+              </div>
+
               <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px]">My Tasks</h2>
               <table className="w-full border-separate border-spacing-0 mt-[8px] rounded-[12px] shadow-[0_1px_10px_#ffd99a10] dark:shadow-none bg-[#fffdfa] dark:bg-slate-900 transition-colors duration-300 overflow-hidden">
                 <thead>
@@ -330,10 +380,10 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedTasks.length === 0 &&(
-                    <tr><td colSpan="5" className="py-[10px] px-[8px] text-center dark:text-slate-400">No tasks added.</td></tr>     
+                  {filteredActiveTasks.length === 0 &&(
+                    <tr><td colSpan="5" className="py-[10px] px-[8px] text-center dark:text-slate-400">No matching tasks found.</td></tr>     
                   )}
-                  {sortedTasks.map((task, idx) => (
+                  {filteredActiveTasks.map((task, idx) => (
                     <tr key={task.id} className="group">
                       <td className={tdStyles}>{idx+1}.</td>
                       <td className={tdStyles}>
@@ -381,8 +431,7 @@ function App() {
               </table>
             </div>
             
-            {/* COMPLETED TASKS CARD - Now with proper Dark Mode classes! */}
-            {tasks.some(task => task.completed) && (
+            {filteredCompletedTasks.length > 0 && (
               <div className="w-[99vw] max-w-[900px] mx-auto mt-[34px] rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[18px] pb-[22px] mb-[40px] transition-colors duration-300">
                 <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px]">Completed Tasks</h2>
                 <table className="w-full border-separate border-spacing-0 mt-[8px] rounded-[12px] shadow-[0_1px_10px_#ffd99a10] dark:shadow-none bg-[#fffdfa] dark:bg-slate-900 transition-colors duration-300 overflow-hidden">
@@ -397,16 +446,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...tasks]
-                      .filter(task => task.completed)
-                      .sort((a, b) => {
-                        const dateA = new Date(a.last_date);
-                        const dateB = new Date(b.last_date);
-                        if (dateA < dateB) return 1;
-                        if (dateA > dateB) return -1;
-                        return difficultyOrder[a.factor] - difficultyOrder[b.factor];
-                      })
-                      .map((task, idx) => (
+                    {filteredCompletedTasks.map((task, idx) => (
                         <tr key={task.id} className="group">
                           <td className={tdStyles}>{idx + 1}.</td>
                           <td className={`${tdStyles} text-[#888] dark:text-slate-500`}>✅ {task.name}</td>
