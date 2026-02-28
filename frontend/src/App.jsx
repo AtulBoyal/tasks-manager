@@ -8,6 +8,7 @@ function App() {
   const [lastDate, setLastDate] = useState('');
   const [tasks, setTasks] = useState([]);
   const [editingTaskId, setEditingTaskId] = useState(null);
+  const [taskLinks, setTaskLinks] = useState([]);
   const [enteredPassword, setEnteredPassword] = useState('');
   const [passwordOk, setPasswordOk] = useState(false);
   
@@ -76,7 +77,7 @@ function App() {
     let updatedTasks;
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate } : t
+        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks } : t
       );
     } else {
       const newTask = {
@@ -84,13 +85,14 @@ function App() {
         name: taskName,
         factor: factor,
         last_date: lastDate,
-        completed: false
+        completed: false,
+        links: taskLinks
       };
       updatedTasks = [...tasks, newTask];
     }
 
     updateLocalTasks(updatedTasks);
-    setTaskName(''); setFactor('Easy'); setLastDate(''); setEditingTaskId(null);
+    setTaskName(''); setFactor('Easy'); setLastDate(''); setTaskLinks([]); setEditingTaskId(null);
   };
 
   const handleDelete = (id) => {
@@ -134,6 +136,7 @@ function App() {
     setTaskName(task.name);
     setFactor(task.factor);
     setLastDate(task.last_date);
+    setTaskLinks(task.links || []); // If old task has no links, default to empty array!
     setEditingTaskId(task.id);
   };
 
@@ -237,6 +240,54 @@ function App() {
                 <div className="flex items-center gap-[9px]">
                   <label className="min-w-[62px] font-semibold text-[#bf6700]">Last Date: </label>
                   <input type="date" className={inputStyles} value={lastDate} min={todayDate} onChange={e => setLastDate(e.target.value)} required />
+                </div>
+                {/* Add this right below the Last Date div, but before the Submit button div */}
+                <div className="w-full flex flex-col gap-[10px] mt-[5px]">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="font-semibold text-[#bf6700]">Resources / Links (Optional):</label>
+                    <button 
+                      type="button" 
+                      onClick={() => setTaskLinks([...taskLinks, { title: '', url: '' }])}
+                      className="text-[0.85em] bg-[#ffe6ba] text-[#b06d0e] px-[10px] py-[3px] rounded-[6px] font-bold transition-colors hover:bg-[#ffd59e]"
+                    >
+                      + Add Link
+                    </button>
+                  </div>
+                  
+                  {taskLinks.map((link, index) => (
+                    <div key={index} className="flex gap-[8px] items-center w-full">
+                      <input 
+                        type="text" 
+                        placeholder="Title (e.g. Codeforces)" 
+                        className={`${inputStyles} flex-1 min-w-[100px]`} 
+                        value={link.title} 
+                        onChange={e => {
+                          const newLinks = [...taskLinks];
+                          newLinks[index].title = e.target.value;
+                          setTaskLinks(newLinks);
+                        }} 
+                      />
+                      <input 
+                        type="url" 
+                        placeholder="URL (https://...)" 
+                        className={`${inputStyles} flex-[2] min-w-[150px]`} 
+                        value={link.url} 
+                        onChange={e => {
+                          const newLinks = [...taskLinks];
+                          newLinks[index].url = e.target.value;
+                          setTaskLinks(newLinks);
+                        }} 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setTaskLinks(taskLinks.filter((_, i) => i !== index))}
+                        className="text-[#e34d4d] font-bold hover:text-[#be2323] px-2 text-lg"
+                        title="Remove link"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
                 <div className="w-full flex justify-center mt-[13px]">
                   <button type="submit" className={`bg-[linear-gradient(90deg,#ff9100_50%,#ffb451_100%)] text-white border-none rounded-[9px] px-[30px] py-[9px] text-[1.1em] font-bold shadow-[0_1px_6px_#ffd08555] cursor-pointer transition-colors hover:bg-[#f27300] flex gap-[8px] items-center justify-center`}>
