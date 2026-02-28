@@ -1,6 +1,7 @@
 // App.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiStorage } from './githubStorage';
+import { Analytics } from "@vercel/analytics/react"
 
 function App() {
   const [taskName, setTaskName] = useState('');
@@ -662,6 +663,7 @@ function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
