@@ -9,19 +9,21 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskLinks, setTaskLinks] = useState([]);
+  
+  // --- NEW STATES FOR TAGS ---
+  const [taskTags, setTaskTags] = useState([]);
+  const [currentTagInput, setCurrentTagInput] = useState('');
+
   const [enteredPassword, setEnteredPassword] = useState('');
   const [passwordOk, setPasswordOk] = useState(false);
   
-  // New States for Local-First Architecture
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // --- SEARCH & FILTER STATES ---
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
 
-  // --- DARK MODE STATE ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
@@ -83,12 +85,22 @@ function App() {
     setHasUnsavedChanges(true);
   };
 
+  // --- ADD TAG HELPER ---
+  const handleAddTag = (e) => {
+    e.preventDefault();
+    const cleanTag = currentTagInput.trim().toLowerCase();
+    if (cleanTag && !taskTags.includes(cleanTag)) {
+      setTaskTags([...taskTags, cleanTag]);
+    }
+    setCurrentTagInput('');
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     let updatedTasks;
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks } : t
+        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags } : t
       );
     } else {
       const newTask = {
@@ -97,12 +109,15 @@ function App() {
         factor: factor,
         last_date: lastDate,
         completed: false,
-        links: taskLinks
+        links: taskLinks,
+        tags: taskTags // Save tags array
       };
       updatedTasks = [...tasks, newTask];
     }
     updateLocalTasks(updatedTasks);
-    setTaskName(''); setFactor('Easy'); setLastDate(''); setTaskLinks([]); setEditingTaskId(null);
+    // Reset Form
+    setTaskName(''); setFactor('Easy'); setLastDate(''); 
+    setTaskLinks([]); setTaskTags([]); setEditingTaskId(null);
   };
 
   const handleDelete = (id) => {
@@ -146,6 +161,7 @@ function App() {
     setFactor(task.factor);
     setLastDate(task.last_date);
     setTaskLinks(task.links || []);
+    setTaskTags(task.tags || []); // Load existing tags
     setEditingTaskId(task.id);
   };
 
@@ -168,14 +184,15 @@ function App() {
   const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
   const todayDate = new Date().toISOString().split('T')[0];
 
-  // --- FILTERING & SORTING LOGIC ---
   const matchesSearchAndFilter = (task) => {
     const query = searchQuery.toLowerCase();
     const matchesFactor = filterFactor === 'All' || task.factor === filterFactor;
     const matchesName = task.name.toLowerCase().includes(query);
     const matchesLinks = task.links ? task.links.some(l => (l.title || '').toLowerCase().includes(query)) : false;
+    // Upgrade search to also look inside the tags!
+    const matchesTags = task.tags ? task.tags.some(t => t.toLowerCase().includes(query)) : false;
     
-    return matchesFactor && (matchesName || matchesLinks);
+    return matchesFactor && (matchesName || matchesLinks || matchesTags);
   };
 
   const filteredActiveTasks = [...tasks]
@@ -279,6 +296,52 @@ function App() {
                   <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400">Last Date: </label>
                   <input type="date" className={inputStyles} value={lastDate} min={todayDate} onChange={e => setLastDate(e.target.value)} required />
                 </div>
+
+                {/* --- NEW TAGS INPUT --- */}
+                <div className="flex flex-col gap-[8px] w-full">
+                  <div className="flex items-center gap-[9px] justify-center">
+                    <label className="font-semibold text-[#bf6700] dark:text-orange-400">Tags: </label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="e.g. assignments" 
+                        className={`${inputStyles} min-w-[120px]`} 
+                        value={currentTagInput}
+                        onChange={e => setCurrentTagInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault(); // Prevent form submit
+                            handleAddTag(e);
+                          }
+                        }}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={handleAddTag}
+                        className="text-[0.85em] bg-[#ffe6ba] dark:bg-slate-700 text-[#b06d0e] dark:text-orange-400 px-[12px] rounded-[6px] font-bold transition-colors hover:bg-[#ffd59e] dark:hover:bg-slate-600"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                  {/* Tag Pills Display */}
+                  {taskTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 justify-center px-4">
+                      {taskTags.map(tag => (
+                        <span key={tag} className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-full dark:bg-orange-900 dark:text-orange-300 flex items-center gap-1 shadow-sm">
+                          #{tag}
+                          <button 
+                            type="button" 
+                            onClick={() => setTaskTags(taskTags.filter(t => t !== tag))} 
+                            className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 ml-1 text-sm leading-none"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 
                 <div className="w-full flex flex-col gap-[10px] mt-[5px]">
                   <div className="flex justify-between items-center px-1">
@@ -332,7 +395,7 @@ function App() {
                     {editingTaskId ? 'Update Task' : 'Add Task'}
                   </button>
                   {editingTaskId && (
-                    <button type="button" className="bg-[#f3f3f3] dark:bg-slate-700 border-none rounded-[8px] px-[16px] py-[8px] ml-[12px] text-[1em] font-medium text-[#333] dark:text-white cursor-pointer transition-colors hover:bg-[#e0e0e0] dark:hover:bg-slate-600" onClick={() => { setTaskName(''); setFactor('Easy'); setLastDate(''); setEditingTaskId(null); }}>
+                    <button type="button" className="bg-[#f3f3f3] dark:bg-slate-700 border-none rounded-[8px] px-[16px] py-[8px] ml-[12px] text-[1em] font-medium text-[#333] dark:text-white cursor-pointer transition-colors hover:bg-[#e0e0e0] dark:hover:bg-slate-600" onClick={() => { setTaskName(''); setFactor('Easy'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setEditingTaskId(null); }}>
                       Cancel
                     </button>
                   )}
@@ -342,13 +405,12 @@ function App() {
 
             <div className="w-[99vw] max-w-[900px] mx-auto rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[18px] pb-[22px] transition-colors duration-300">
               
-              {/* --- SEARCH AND FILTER CONTROLS --- */}
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 mt-2">
                 <div className="relative w-full sm:w-2/3">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                   <input 
                     type="text" 
-                    placeholder="Search tasks or links..." 
+                    placeholder="Search tasks, links, or #tags..." 
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className={`${inputStyles} w-full pl-10`}
@@ -387,31 +449,43 @@ function App() {
                     <tr key={task.id} className="group">
                       <td className={tdStyles}>{idx+1}.</td>
                       <td className={tdStyles}>
-                        <div className="flex items-center justify-center gap-2">
-                          <span className={task.last_date === todayDate ? 'text-black dark:text-white font-bold' : 'text-black dark:text-slate-200'}>
-                            {task.name}
-                          </span>
-                          
-                          {task.links && task.links.length > 0 && (
-                            <div className="relative group/tooltip inline-block align-middle cursor-help">
-                              <span className="text-[0.8em] bg-[#e8f0fe] dark:bg-slate-700 text-[#065fd4] dark:text-blue-400 px-[6px] py-[2px] rounded-full font-bold border border-[#a4c2f4] dark:border-slate-600">
-                                🔗 {task.links.length}
-                              </span>
-                              
-                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[8px] hidden group-hover/tooltip:flex flex-col gap-[6px] bg-[#333] dark:bg-black text-white text-[13px] rounded-[8px] p-[10px] z-10 w-max max-w-[250px] shadow-lg">
-                                {task.links.map((link, i) => (
-                                  <a 
-                                    key={i} 
-                                    href={link.url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-[#93c5fd] hover:text-[#bfdbfe] hover:underline text-left truncate block"
-                                  >
-                                    • {link.title || 'Link'}
-                                  </a>
-                                ))}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-[#333] dark:border-t-black"></div>
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className={task.last_date === todayDate ? 'text-black dark:text-white font-bold' : 'text-black dark:text-slate-200'}>
+                              {task.name}
+                            </span>
+                            
+                            {task.links && task.links.length > 0 && (
+                              <div className="relative group/tooltip inline-block align-middle cursor-help">
+                                <span className="text-[0.8em] bg-[#e8f0fe] dark:bg-slate-700 text-[#065fd4] dark:text-blue-400 px-[6px] py-[2px] rounded-full font-bold border border-[#a4c2f4] dark:border-slate-600">
+                                  🔗 {task.links.length}
+                                </span>
+                                
+                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[8px] hidden group-hover/tooltip:flex flex-col gap-[6px] bg-[#333] dark:bg-black text-white text-[13px] rounded-[8px] p-[10px] z-10 w-max max-w-[250px] shadow-lg">
+                                  {task.links.map((link, i) => (
+                                    <a 
+                                      key={i} 
+                                      href={link.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-[#93c5fd] hover:text-[#bfdbfe] hover:underline text-left truncate block"
+                                    >
+                                      • {link.title || 'Link'}
+                                    </a>
+                                  ))}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-[#333] dark:border-t-black"></div>
+                                </div>
                               </div>
+                            )}
+                          </div>
+                          {/* --- TAGS DISPLAY IN TABLE --- */}
+                          {task.tags && task.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1 justify-center">
+                              {task.tags.map(tag => (
+                                <span key={tag} className="bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide">
+                                  #{tag}
+                                </span>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -449,7 +523,20 @@ function App() {
                     {filteredCompletedTasks.map((task, idx) => (
                         <tr key={task.id} className="group">
                           <td className={tdStyles}>{idx + 1}.</td>
-                          <td className={`${tdStyles} text-[#888] dark:text-slate-500`}>✅ {task.name}</td>
+                          <td className={`${tdStyles} text-[#888] dark:text-slate-500`}>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <span>✅ {task.name}</span>
+                              {task.tags && task.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1 justify-center opacity-70">
+                                  {task.tags.map(tag => (
+                                    <span key={tag} className="bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide">
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
                           <td className={tdStyles}><span className={`inline-block min-w-[71px] text-[.96em] font-bold text-white rounded-[16px] py-[3px] px-[17px] mr-[7px] tracking-[1px] align-middle ${getFactorClass(task.factor)}`}>{task.factor}</span></td>
                           <td className={tdStyles}>{formatDate(task.last_date)}</td>
                           <td className={tdStyles}>({task.completion_date ? formatDate(task.completion_date) : ''})</td>
