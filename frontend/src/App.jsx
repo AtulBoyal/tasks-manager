@@ -18,7 +18,6 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // Initialize from Local Storage if available
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(() => {
     return localStorage.getItem('task_manager_unsaved') === 'true';
   });
@@ -40,35 +39,28 @@ function App() {
     }
   }, [isDarkMode]);
 
-  // --- UPGRADED FETCH WITH OFFLINE CACHING ---
   const fetchTasks = useCallback(async () => {
     try {
-      // 1. If we have unsaved local changes from a closed tab, PROTECT THEM.
       const unsavedFlag = localStorage.getItem('task_manager_unsaved') === 'true';
       if (unsavedFlag) {
         const cached = localStorage.getItem('task_manager_cache');
         if (cached) {
           setTasks(JSON.parse(cached));
           setHasUnsavedChanges(true);
-          return; // Skip GitHub fetch so we don't overwrite your local work!
+          return; 
         }
       }
 
-      // 2. Normal Fetch from GitHub
       const { tasks: fetchedTasks } = await apiStorage.getTasks(enteredPassword);
       setTasks(fetchedTasks || []);
       setHasUnsavedChanges(false);
       
-      // 3. Save to Offline Cache
       localStorage.setItem('task_manager_cache', JSON.stringify(fetchedTasks || []));
       localStorage.setItem('task_manager_unsaved', 'false');
-      localStorage.setItem('offline_auth', enteredPassword); // Store password hash/string for offline unlock
+      localStorage.setItem('offline_auth', enteredPassword);
 
     } catch (error) {
-      // If the backend actively rejected the password, throw unauthorized
       if (error.message === "Unauthorized") throw error;
-
-      // If it's a network/offline error, check if the password matches our offline cache
       if (enteredPassword === localStorage.getItem('offline_auth')) {
         const cached = localStorage.getItem('task_manager_cache');
         if (cached) {
@@ -120,13 +112,19 @@ function App() {
     };
   }, [hasUnsavedChanges]);
 
-  // --- UPGRADED LOCAL MUTATION (NOW SAVES TO DISK) ---
   const updateLocalTasks = (newTasks) => {
     setTasks(newTasks);
     setHasUnsavedChanges(true);
-    // Instantly save to the browser's hard drive
     localStorage.setItem('task_manager_cache', JSON.stringify(newTasks));
     localStorage.setItem('task_manager_unsaved', 'true');
+  };
+
+  // --- NEW: INLINE EDIT HELPER ---
+  const handleInlineUpdate = (taskId, field, value) => {
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId ? { ...t, [field]: value } : t
+    );
+    updateLocalTasks(updatedTasks);
   };
 
   const handleAddTag = (e) => {
@@ -185,13 +183,12 @@ function App() {
     updateLocalTasks(updatedTasks);
   };
 
-  // --- UPGRADED SYNC TO CLOUD ---
   const handleSyncToCloud = async () => {
     setIsSyncing(true);
     try {
       await apiStorage.saveTasks(tasks, enteredPassword);
       setHasUnsavedChanges(false);
-      localStorage.setItem('task_manager_unsaved', 'false'); // Mark cache as clean!
+      localStorage.setItem('task_manager_unsaved', 'false'); 
     } catch (error) {
       console.error('Error syncing tasks:', error);
       alert('GitHub Sync Failed. You might be offline. Your changes are safely stored locally!');
@@ -487,7 +484,7 @@ function App() {
                     <tr><td colSpan="5" className="py-[10px] px-[8px] text-center dark:text-slate-400">No matching tasks found.</td></tr>     
                   )}
                   {filteredActiveTasks.map((task, idx) => (
-                    <tr key={task.id} className="group">
+                    <tr key={task.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                       <td className={tdStyles}>{idx+1}.</td>
                       <td className={tdStyles}>
                         <div className="flex flex-col items-center justify-center gap-1">
@@ -530,11 +527,40 @@ function App() {
                           )}
                         </div>
                       </td>
-                      <td className={tdStyles}><span className={`inline-block min-w-[71px] text-[.96em] font-bold text-white rounded-[16px] py-[3px] px-[17px] mr-[7px] tracking-[1px] align-middle ${getFactorClass(task.factor)}`}>{task.factor}</span></td>
-                      <td className={tdStyles}>({formatDate(task.last_date)})</td>
+                      <td className={tdStyles}>
+                        {/* --- INLINE EDIT FACTOR --- */}
+                        <div className="relative inline-block" title="Click to change difficulty">
+                          <select
+                            value={task.factor}
+                            onChange={(e) => handleInlineUpdate(task.id, 'factor', e.target.value)}
+                            className={`appearance-none cursor-pointer outline-none inline-block min-w-[71px] text-[.96em] font-bold text-white rounded-[16px] py-[3px] px-[17px] tracking-[1px] text-center transition-opacity hover:opacity-85 shadow-sm border border-transparent hover:border-white/50 ${getFactorClass(task.factor)}`}
+                          >
+                            <option value="Easy" className="bg-[#55bc69c7] text-white">Easy</option>
+                            <option value="Medium" className="bg-[#feb825e8] text-white">Medium</option>
+                            <option value="Hard" className="bg-[#e25d3be3] text-white">Hard</option>
+                          </select>
+                        </div>
+                      </td>
+                      <td className={tdStyles}>
+                        {/* --- INLINE EDIT DATE --- */}
+                        <div className="relative inline-flex items-center justify-center cursor-pointer group/date" title="Click to change date">
+                          <span className="border-b border-dashed border-gray-400 dark:border-gray-500 group-hover/date:border-[#c57415] dark:group-hover/date:border-orange-400 group-hover/date:text-[#c57415] dark:group-hover/date:text-orange-400 transition-colors">
+                            {formatDate(task.last_date)}
+                          </span>
+                          <input
+                            type="date"
+                            value={task.last_date}
+                            min={todayDate}
+                            onChange={(e) => {
+                              if (e.target.value) handleInlineUpdate(task.id, 'last_date', e.target.value);
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        </div>
+                      </td>
                       <td className={tdStyles}>
                         <div className="flex gap-[10px] justify-center">
-                          <button className="bg-transparent border-none text-[#065fd4] dark:text-blue-400 text-[1.15em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe] dark:hover:bg-slate-700" onClick={() => handleEdit(task)} title="Edit">✏️</button>
+                          <button className="bg-transparent border-none text-[#065fd4] dark:text-blue-400 text-[1.15em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe] dark:hover:bg-slate-700" onClick={() => handleEdit(task)} title="Full Edit (Name, Links, Tags)">✏️</button>
                           <button className="bg-transparent border-none text-[#e34d4d] text-[1.2em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#be2323] hover:bg-[#fff0f0] dark:hover:bg-slate-700" onClick={() => handleDelete(task.id)} title="Delete">🗑️</button>
                           <button className="bg-transparent border-none text-[#2e7d32] dark:text-green-500 text-[1.25em] cursor-pointer py-[3px] px-[5px] transition-colors rounded-[6px] hover:text-[#0d540d] hover:bg-[#e8f5e9] dark:hover:bg-slate-700" onClick={() => handleComplete(task)} title="Mark as Complete">✔️</button>
                         </div>
@@ -561,7 +587,7 @@ function App() {
                   </thead>
                   <tbody>
                     {filteredCompletedTasks.map((task, idx) => (
-                        <tr key={task.id} className="group">
+                        <tr key={task.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                           <td className={tdStyles}>{idx + 1}.</td>
                           <td className={`${tdStyles} text-[#888] dark:text-slate-500`}>
                             <div className="flex flex-col items-center justify-center gap-1">
