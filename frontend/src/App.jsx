@@ -9,8 +9,6 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskLinks, setTaskLinks] = useState([]);
-  
-  // --- NEW STATES FOR TAGS ---
   const [taskTags, setTaskTags] = useState([]);
   const [currentTagInput, setCurrentTagInput] = useState('');
 
@@ -19,7 +17,11 @@ function App() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Initialize from Local Storage if available
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(() => {
+    return localStorage.getItem('task_manager_unsaved') === 'true';
+  });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
@@ -38,13 +40,45 @@ function App() {
     }
   }, [isDarkMode]);
 
+  // --- UPGRADED FETCH WITH OFFLINE CACHING ---
   const fetchTasks = useCallback(async () => {
     try {
-      const { tasks } = await apiStorage.getTasks(enteredPassword);
-      setTasks(tasks || []);
+      // 1. If we have unsaved local changes from a closed tab, PROTECT THEM.
+      const unsavedFlag = localStorage.getItem('task_manager_unsaved') === 'true';
+      if (unsavedFlag) {
+        const cached = localStorage.getItem('task_manager_cache');
+        if (cached) {
+          setTasks(JSON.parse(cached));
+          setHasUnsavedChanges(true);
+          return; // Skip GitHub fetch so we don't overwrite your local work!
+        }
+      }
+
+      // 2. Normal Fetch from GitHub
+      const { tasks: fetchedTasks } = await apiStorage.getTasks(enteredPassword);
+      setTasks(fetchedTasks || []);
       setHasUnsavedChanges(false);
+      
+      // 3. Save to Offline Cache
+      localStorage.setItem('task_manager_cache', JSON.stringify(fetchedTasks || []));
+      localStorage.setItem('task_manager_unsaved', 'false');
+      localStorage.setItem('offline_auth', enteredPassword); // Store password hash/string for offline unlock
+
     } catch (error) {
-      console.error(error);
+      // If the backend actively rejected the password, throw unauthorized
+      if (error.message === "Unauthorized") throw error;
+
+      // If it's a network/offline error, check if the password matches our offline cache
+      if (enteredPassword === localStorage.getItem('offline_auth')) {
+        const cached = localStorage.getItem('task_manager_cache');
+        if (cached) {
+          setTasks(JSON.parse(cached));
+          setHasUnsavedChanges(localStorage.getItem('task_manager_unsaved') === 'true');
+          console.warn("Offline Mode: Loaded from local cache.");
+        }
+      } else {
+        throw new Error("Network Error & Offline Auth Failed");
+      }
     }
   }, [enteredPassword]);
 
@@ -55,7 +89,13 @@ function App() {
       await fetchTasks();
       setPasswordOk(true);
     } catch (error) {
-      alert("Wrong password! Try again.");
+      if (error.message === "Unauthorized") {
+        alert("Wrong password! Try again.");
+      } else if (error.message === "Network Error & Offline Auth Failed") {
+        alert("You are offline, and the password doesn't match the offline cache.");
+      } else {
+        alert("Network error: Please check your connection.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -80,12 +120,15 @@ function App() {
     };
   }, [hasUnsavedChanges]);
 
+  // --- UPGRADED LOCAL MUTATION (NOW SAVES TO DISK) ---
   const updateLocalTasks = (newTasks) => {
     setTasks(newTasks);
     setHasUnsavedChanges(true);
+    // Instantly save to the browser's hard drive
+    localStorage.setItem('task_manager_cache', JSON.stringify(newTasks));
+    localStorage.setItem('task_manager_unsaved', 'true');
   };
 
-  // --- ADD TAG HELPER ---
   const handleAddTag = (e) => {
     e.preventDefault();
     const cleanTag = currentTagInput.trim().toLowerCase();
@@ -110,12 +153,11 @@ function App() {
         last_date: lastDate,
         completed: false,
         links: taskLinks,
-        tags: taskTags // Save tags array
+        tags: taskTags
       };
       updatedTasks = [...tasks, newTask];
     }
     updateLocalTasks(updatedTasks);
-    // Reset Form
     setTaskName(''); setFactor('Easy'); setLastDate(''); 
     setTaskLinks([]); setTaskTags([]); setEditingTaskId(null);
   };
@@ -143,14 +185,16 @@ function App() {
     updateLocalTasks(updatedTasks);
   };
 
+  // --- UPGRADED SYNC TO CLOUD ---
   const handleSyncToCloud = async () => {
     setIsSyncing(true);
     try {
       await apiStorage.saveTasks(tasks, enteredPassword);
       setHasUnsavedChanges(false);
+      localStorage.setItem('task_manager_unsaved', 'false'); // Mark cache as clean!
     } catch (error) {
       console.error('Error syncing tasks:', error);
-      alert('Failed to sync. Please try again.');
+      alert('GitHub Sync Failed. You might be offline. Your changes are safely stored locally!');
     } finally {
       setIsSyncing(false);
     }
@@ -161,7 +205,7 @@ function App() {
     setFactor(task.factor);
     setLastDate(task.last_date);
     setTaskLinks(task.links || []);
-    setTaskTags(task.tags || []); // Load existing tags
+    setTaskTags(task.tags || []);
     setEditingTaskId(task.id);
   };
 
@@ -189,7 +233,6 @@ function App() {
     const matchesFactor = filterFactor === 'All' || task.factor === filterFactor;
     const matchesName = task.name.toLowerCase().includes(query);
     const matchesLinks = task.links ? task.links.some(l => (l.title || '').toLowerCase().includes(query)) : false;
-    // Upgrade search to also look inside the tags!
     const matchesTags = task.tags ? task.tags.some(t => t.toLowerCase().includes(query)) : false;
     
     return matchesFactor && (matchesName || matchesLinks || matchesTags);
@@ -297,7 +340,6 @@ function App() {
                   <input type="date" className={inputStyles} value={lastDate} min={todayDate} onChange={e => setLastDate(e.target.value)} required />
                 </div>
 
-                {/* --- NEW TAGS INPUT --- */}
                 <div className="flex flex-col gap-[8px] w-full">
                   <div className="flex items-center gap-[9px] justify-center">
                     <label className="font-semibold text-[#bf6700] dark:text-orange-400">Tags: </label>
@@ -310,7 +352,7 @@ function App() {
                         onChange={e => setCurrentTagInput(e.target.value)}
                         onKeyDown={e => {
                           if (e.key === 'Enter') {
-                            e.preventDefault(); // Prevent form submit
+                            e.preventDefault();
                             handleAddTag(e);
                           }
                         }}
@@ -324,7 +366,6 @@ function App() {
                       </button>
                     </div>
                   </div>
-                  {/* Tag Pills Display */}
                   {taskTags.length > 0 && (
                     <div className="flex flex-wrap gap-2 justify-center px-4">
                       {taskTags.map(tag => (
@@ -478,7 +519,6 @@ function App() {
                               </div>
                             )}
                           </div>
-                          {/* --- TAGS DISPLAY IN TABLE --- */}
                           {task.tags && task.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1 justify-center">
                               {task.tags.map(tag => (
