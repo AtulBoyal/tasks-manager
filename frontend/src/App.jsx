@@ -4,7 +4,7 @@ import { apiStorage } from './githubStorage';
 
 function App() {
   const [taskName, setTaskName] = useState('');
-  const [factor, setFactor] = useState('Easy');
+  const [factor, setFactor] = useState('Normal'); // Default to Normal now
   const [lastDate, setLastDate] = useState('');
   const [tasks, setTasks] = useState([]);
   const [editingTaskId, setEditingTaskId] = useState(null);
@@ -24,6 +24,7 @@ function App() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
+  const [filterDate, setFilterDate] = useState(''); // NEW: Date Filter State
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
@@ -39,24 +40,46 @@ function App() {
     }
   }, [isDarkMode]);
 
+  // --- ON-THE-FLY DATA MIGRATOR ---
+  // Translates legacy 'Easy/Medium/Hard' tasks into 'Later/Normal/Urgent' safely
+  const migrateLegacyTasks = (taskList) => {
+    let hasLegacy = false;
+    const updated = taskList.map(task => {
+      if (['Easy', 'Medium', 'Hard'].includes(task.factor)) {
+        hasLegacy = true;
+        let newFactor = 'Later';
+        if (task.factor === 'Hard') newFactor = 'Urgent';
+        if (task.factor === 'Medium') newFactor = 'Normal';
+        return { ...task, factor: newFactor };
+      }
+      return task;
+    });
+    return { updated, hasLegacy };
+  };
+
   const fetchTasks = useCallback(async () => {
     try {
       const unsavedFlag = localStorage.getItem('task_manager_unsaved') === 'true';
       if (unsavedFlag) {
         const cached = localStorage.getItem('task_manager_cache');
         if (cached) {
-          setTasks(JSON.parse(cached));
-          setHasUnsavedChanges(true);
+          const { updated, hasLegacy } = migrateLegacyTasks(JSON.parse(cached));
+          setTasks(updated);
+          setHasUnsavedChanges(true); // Keep unsaved status true
           return; 
         }
       }
 
       const { tasks: fetchedTasks } = await apiStorage.getTasks(enteredPassword);
-      setTasks(fetchedTasks || []);
-      setHasUnsavedChanges(false);
+      const { updated, hasLegacy } = migrateLegacyTasks(fetchedTasks || []);
       
-      localStorage.setItem('task_manager_cache', JSON.stringify(fetchedTasks || []));
-      localStorage.setItem('task_manager_unsaved', 'false');
+      setTasks(updated);
+      
+      // If legacy data was found and fixed, trigger the unsaved warning so the user syncs it!
+      setHasUnsavedChanges(hasLegacy);
+      
+      localStorage.setItem('task_manager_cache', JSON.stringify(updated));
+      localStorage.setItem('task_manager_unsaved', hasLegacy ? 'true' : 'false');
       localStorage.setItem('offline_auth', enteredPassword);
 
     } catch (error) {
@@ -64,7 +87,8 @@ function App() {
       if (enteredPassword === localStorage.getItem('offline_auth')) {
         const cached = localStorage.getItem('task_manager_cache');
         if (cached) {
-          setTasks(JSON.parse(cached));
+          const { updated } = migrateLegacyTasks(JSON.parse(cached));
+          setTasks(updated);
           setHasUnsavedChanges(localStorage.getItem('task_manager_unsaved') === 'true');
           console.warn("Offline Mode: Loaded from local cache.");
         }
@@ -155,7 +179,7 @@ function App() {
       updatedTasks = [...tasks, newTask];
     }
     updateLocalTasks(updatedTasks);
-    setTaskName(''); setFactor('Easy'); setLastDate(''); 
+    setTaskName(''); setFactor('Normal'); setLastDate(''); 
     setTaskLinks([]); setTaskTags([]); setEditingTaskId(null);
   };
 
@@ -214,24 +238,28 @@ function App() {
     return `${day}-${month}-${year}`;
   };
 
+  // Upgraded Colors to match the Urgency Model
   const getFactorClass = (factor) => {
-    if (factor === 'Easy') return 'bg-[#55bc69c7]';
-    if (factor === 'Medium') return 'bg-[#feb825e8]';
-    if (factor === 'Hard') return 'bg-[#e25d3be3]';
+    if (factor === 'Later') return 'bg-emerald-500 dark:bg-emerald-600 text-white';
+    if (factor === 'Normal') return 'bg-amber-500 dark:bg-amber-600 text-white';
+    if (factor === 'Urgent') return 'bg-red-500 dark:bg-red-600 text-white';
     return '';
   };
 
-  const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
+  const difficultyOrder = { 'Urgent': 1, 'Normal': 2, 'Later': 3 };
   const todayDate = new Date().toISOString().split('T')[0];
 
   const matchesSearchAndFilter = (task) => {
     const query = searchQuery.toLowerCase();
     const matchesFactor = filterFactor === 'All' || task.factor === filterFactor;
+    // Date filter: Only check if filterDate is actually set
+    const matchesDate = filterDate === '' || task.last_date === filterDate;
+    
     const matchesName = task.name.toLowerCase().includes(query);
     const matchesLinks = task.links ? task.links.some(l => (l.title || '').toLowerCase().includes(query)) : false;
     const matchesTags = task.tags ? task.tags.some(t => t.toLowerCase().includes(query)) : false;
     
-    return matchesFactor && (matchesName || matchesLinks || matchesTags);
+    return matchesFactor && matchesDate && (matchesName || matchesLinks || matchesTags);
   };
 
   const filteredActiveTasks = [...tasks]
@@ -258,8 +286,6 @@ function App() {
 
   const inputStyles = "px-[13px] py-[8px] rounded-[9px] border-[1.2px] border-[#ffd180] dark:border-slate-600 bg-[#fff9f2] dark:bg-slate-700 min-w-[135px] text-[1em] text-black dark:text-white outline-none transition-colors shadow-[inset_0_1px_4px_#fff6ed80] focus:border-[#ffb935] focus:dark:border-orange-400 focus:bg-[#fffbf1] focus:dark:bg-slate-600";
   const thStyles = "py-[10px] px-[9px] bg-[#ffe6ba] dark:bg-slate-800 text-[#b06d0e] dark:text-orange-400 text-[15.5px] font-[750] border-b-[2px] border-b-[#ffd59e] dark:border-b-slate-700 last:pr-0";
-  
-  // Updated tdStyles to support both block (mobile) and table-cell (desktop)
   const tdStyles = "block md:table-cell py-3 md:py-[10px] px-2 md:px-[8px] border-b border-[#ffe0b0] dark:border-slate-700 md:border-b-[1.2px] last:border-0 md:group-last:border-b-0 text-black dark:text-slate-200 text-left md:text-center";
 
   return (
@@ -287,7 +313,6 @@ function App() {
         <div>
           <div className="min-h-screen flex flex-col items-center w-screen overflow-x-hidden">
             
-            {/* --- HEADER --- */}
             <div className="w-[92vw] max-w-[900px] flex flex-col sm:flex-row justify-between items-center mt-[20px] mb-[10px] px-[10px] gap-4">
               <div className="flex items-center gap-2">
                 <span className={`h-3 w-3 rounded-full ${hasUnsavedChanges ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></span>
@@ -297,27 +322,17 @@ function App() {
               </div>
               
               <div className="flex gap-4 items-center">
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="p-2 text-[1.2rem] rounded-full bg-[#ffe6ba] dark:bg-slate-700 hover:bg-[#ffd59e] dark:hover:bg-slate-600 transition-colors shadow-sm"
-                  title="Toggle Dark Mode"
-                >
+                <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-[1.2rem] rounded-full bg-[#ffe6ba] dark:bg-slate-700 hover:bg-[#ffd59e] dark:hover:bg-slate-600 transition-colors shadow-sm" title="Toggle Dark Mode">
                   {isDarkMode ? '☀️' : '🌙'}
                 </button>
 
-                <button 
-                  onClick={handleSyncToCloud}
-                  disabled={!hasUnsavedChanges || isSyncing}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-white shadow-md transition-all 
-                    ${!hasUnsavedChanges ? 'bg-gray-400 dark:bg-slate-600 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'}`}
-                >
+                <button onClick={handleSyncToCloud} disabled={!hasUnsavedChanges || isSyncing} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-white shadow-md transition-all ${!hasUnsavedChanges ? 'bg-gray-400 dark:bg-slate-600 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'}`}>
                   {isSyncing && <span className="animate-spin inline-block w-[14px] h-[14px] border-[2px] border-[rgba(255,255,255,0.3)] border-t-white rounded-full"></span>}
                   {isSyncing ? 'Syncing...' : '☁️ Sync to Cloud'}
                 </button>
               </div>
             </div>
 
-            {/* --- FORM CARD --- */}
             <div className="w-[92vw] max-w-[512px] rounded-[21px] mb-[29px] shadow-[0_7px_36px_#ff944740] dark:shadow-none px-[20px] sm:px-[28px] pt-[34px] pb-[24px] backdrop-blur-[2.5px] bg-[linear-gradient(107deg,#ffd59e_58%,#ffe7cc_100%)] dark:bg-none dark:bg-slate-800 dark:border dark:border-slate-700 transition-colors duration-300">
               <h2 className="text-center font-extrabold text-[2rem] mb-[22px] text-[#cc6000] dark:text-orange-500 tracking-[1px]">
                 {editingTaskId ? '✏️ Update Task' : 'Add a New Task'}
@@ -330,11 +345,11 @@ function App() {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-between sm:justify-start gap-[9px]">
-                  <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">Factor:</label>
+                  <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">Priority:</label>
                   <select className={`${inputStyles} w-full sm:w-auto`} value={factor} onChange={e => setFactor(e.target.value)}>
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
+                    <option value="Urgent">🔴 Urgent</option>
+                    <option value="Normal">🟡 Normal</option>
+                    <option value="Later">🟢 Later</option>
                   </select>
                 </div>
                 
@@ -434,7 +449,7 @@ function App() {
                     {editingTaskId ? 'Update Task' : 'Add Task'}
                   </button>
                   {editingTaskId && (
-                    <button type="button" className="bg-[#f3f3f3] dark:bg-slate-700 border-none rounded-[8px] px-[16px] py-[12px] sm:py-[8px] text-[1em] font-medium text-[#333] dark:text-white cursor-pointer transition-colors hover:bg-[#e0e0e0] dark:hover:bg-slate-600 w-full sm:w-auto" onClick={() => { setTaskName(''); setFactor('Easy'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setEditingTaskId(null); }}>
+                    <button type="button" className="bg-[#f3f3f3] dark:bg-slate-700 border-none rounded-[8px] px-[16px] py-[12px] sm:py-[8px] text-[1em] font-medium text-[#333] dark:text-white cursor-pointer transition-colors hover:bg-[#e0e0e0] dark:hover:bg-slate-600 w-full sm:w-auto" onClick={() => { setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setEditingTaskId(null); }}>
                       Cancel
                     </button>
                   )}
@@ -442,11 +457,13 @@ function App() {
               </form>
             </div>
 
-            {/* --- ACTIVE TASKS TABLE (RESPONSIVE) --- */}
             <div className="w-[96vw] max-w-[900px] mx-auto rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[12px] sm:px-[18px] pb-[22px] transition-colors duration-300">
               
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 mt-2">
-                <div className="relative w-full sm:w-2/3">
+              {/* --- ADVANCED FILTER BAR --- */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-6 mt-2">
+                
+                {/* Search Bar */}
+                <div className="relative w-full md:flex-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                   <input 
                     type="text" 
@@ -456,29 +473,53 @@ function App() {
                     className={`${inputStyles} w-full pl-10`}
                   />
                 </div>
-                <div className="w-full sm:w-1/3">
-                  <select 
-                    value={filterFactor} 
-                    onChange={e => setFilterFactor(e.target.value)}
-                    className={`${inputStyles} w-full`}
-                  >
-                    <option value="All">All Factors</option>
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
+                
+                <div className="flex w-full md:w-auto gap-3">
+                  {/* Priority Filter */}
+                  <div className="w-1/2 md:w-auto">
+                    <select 
+                      value={filterFactor} 
+                      onChange={e => setFilterFactor(e.target.value)}
+                      className={`${inputStyles} w-full min-w-[130px] cursor-pointer`}
+                    >
+                      <option value="All">All Priorities</option>
+                      <option value="Urgent">🔴 Urgent</option>
+                      <option value="Normal">🟡 Normal</option>
+                      <option value="Later">🟢 Later</option>
+                    </select>
+                  </div>
+                  
+                  {/* Date Filter */}
+                  <div className="w-1/2 md:w-auto relative group flex items-center">
+                    <input 
+                      type="date" 
+                      value={filterDate} 
+                      onChange={e => setFilterDate(e.target.value)}
+                      className={`${inputStyles} w-full min-w-[140px] cursor-pointer`}
+                      title="Filter tasks by exact date"
+                    />
+                    {filterDate && (
+                      <button 
+                        onClick={() => setFilterDate('')} 
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 bg-[#fff9f2] dark:bg-slate-700 px-1 rounded transition-colors"
+                        title="Clear Date Filter"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
+                
               </div>
 
               <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px]">My Tasks</h2>
               
-              {/* THE MAGIC TABLE CSS */}
               <table className="w-full block md:table mt-[8px] md:border-separate md:border-spacing-0 md:rounded-[12px] md:shadow-[0_1px_10px_#ffd99a10] md:dark:shadow-none md:bg-[#fffdfa] md:dark:bg-slate-900 transition-colors duration-300">
                 <thead className="hidden md:table-header-group">
                   <tr>
                     <th className={thStyles}>S.No.</th>
                     <th className={thStyles}>Task</th>
-                    <th className={thStyles}>Factor</th>
+                    <th className={thStyles}>Priority</th>
                     <th className={thStyles}>Last Date</th>
                     <th className={thStyles}>Action</th>
                   </tr>
@@ -521,16 +562,16 @@ function App() {
                       </td>
 
                       <td className={`${tdStyles} flex justify-between items-center md:table-cell`}>
-                        <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-sm">Factor:</span>
-                        <div className="relative inline-block" title="Click to change difficulty">
+                        <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-sm">Priority:</span>
+                        <div className="relative inline-block" title="Click to change priority">
                           <select
                             value={task.factor}
                             onChange={(e) => handleInlineUpdate(task.id, 'factor', e.target.value)}
                             className={`appearance-none cursor-pointer outline-none inline-block min-w-[71px] text-[.96em] font-bold text-white rounded-[16px] py-[3px] px-[17px] tracking-[1px] text-center transition-opacity hover:opacity-85 shadow-sm border border-transparent hover:border-white/50 ${getFactorClass(task.factor)}`}
                           >
-                            <option value="Easy" className="bg-[#55bc69c7] text-white">Easy</option>
-                            <option value="Medium" className="bg-[#feb825e8] text-white">Medium</option>
-                            <option value="Hard" className="bg-[#e25d3be3] text-white">Hard</option>
+                            <option value="Urgent" className="bg-red-500 text-white">Urgent</option>
+                            <option value="Normal" className="bg-amber-500 text-white">Normal</option>
+                            <option value="Later" className="bg-emerald-500 text-white">Later</option>
                           </select>
                         </div>
                       </td>
@@ -544,7 +585,6 @@ function App() {
                           <input
                             type="date"
                             value={task.last_date}
-                            min={todayDate}
                             onChange={(e) => {
                               if (e.target.value) handleInlineUpdate(task.id, 'last_date', e.target.value);
                             }}
@@ -555,7 +595,7 @@ function App() {
 
                       <td className={`${tdStyles} flex justify-end md:justify-center pt-4 md:pt-[10px] mt-2 md:mt-0 border-t border-orange-50 dark:border-slate-700 md:border-none`}>
                         <div className="flex gap-[15px] md:gap-[10px] justify-center bg-orange-50/50 dark:bg-slate-700/30 md:bg-transparent px-3 py-1 rounded-lg">
-                          <button className="bg-transparent border-none text-[#065fd4] dark:text-blue-400 text-[1.3em] md:text-[1.15em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe] dark:hover:bg-slate-600" onClick={() => handleEdit(task)} title="Full Edit (Name, Links, Tags)">✏️</button>
+                          <button className="bg-transparent border-none text-[#065fd4] dark:text-blue-400 text-[1.3em] md:text-[1.15em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe] dark:hover:bg-slate-600" onClick={() => handleEdit(task)} title="Full Edit">✏️</button>
                           <button className="bg-transparent border-none text-[#e34d4d] text-[1.4em] md:text-[1.2em] cursor-pointer py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#be2323] hover:bg-[#fff0f0] dark:hover:bg-slate-600" onClick={() => handleDelete(task.id)} title="Delete">🗑️</button>
                           <button className="bg-transparent border-none text-[#2e7d32] dark:text-green-500 text-[1.45em] md:text-[1.25em] cursor-pointer py-[3px] px-[5px] transition-colors rounded-[6px] hover:text-[#0d540d] hover:bg-[#e8f5e9] dark:hover:bg-slate-600" onClick={() => handleComplete(task)} title="Mark as Complete">✔️</button>
                         </div>
@@ -566,7 +606,6 @@ function App() {
               </table>
             </div>
             
-            {/* --- COMPLETED TASKS TABLE (RESPONSIVE) --- */}
             {filteredCompletedTasks.length > 0 && (
               <div className="w-[96vw] max-w-[900px] mx-auto mt-[34px] rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[12px] sm:px-[18px] pb-[22px] mb-[40px] transition-colors duration-300">
                 <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px]">Completed Tasks</h2>
@@ -575,7 +614,7 @@ function App() {
                     <tr>
                       <th className={thStyles}>S.No.</th>
                       <th className={thStyles}>Task</th>
-                      <th className={thStyles}>Factor</th>
+                      <th className={thStyles}>Priority</th>
                       <th className={thStyles}>Last Date</th>
                       <th className={thStyles}>Completion Date</th>
                       <th className={thStyles}>Action</th>
@@ -598,7 +637,7 @@ function App() {
                             )}
                           </td>
                           <td className={`${tdStyles} flex justify-between items-center md:table-cell`}>
-                            <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-sm">Factor:</span>
+                            <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-sm">Priority:</span>
                             <span className={`inline-block min-w-[71px] text-[.96em] font-bold text-white rounded-[16px] py-[3px] px-[17px] mr-[7px] tracking-[1px] align-middle opacity-80 md:opacity-100 ${getFactorClass(task.factor)}`}>{task.factor}</span>
                           </td>
                           <td className={`${tdStyles} flex justify-between items-center md:table-cell`}>
