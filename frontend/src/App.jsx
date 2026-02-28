@@ -321,7 +321,39 @@ function App() {
                   {sortedTasks.map((task, idx) => (
                     <tr key={task.id} className="group">
                       <td className={tdStyles}>{idx+1}.</td>
-                      <td className={tdStyles}><span className={task.last_date === todayDate ? 'text-black font-bold' : ''}>{task.name}</span></td>
+                      <td className={tdStyles}>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className={task.last_date === todayDate ? 'text-black font-bold' : ''}>
+                            {task.name}
+                          </span>
+                          
+                          {/* If links exist and there is at least 1, render the tooltip icon */}
+                          {task.links && task.links.length > 0 && (
+                            <div className="relative group inline-block align-middle cursor-help">
+                              <span className="text-[0.8em] bg-[#e8f0fe] text-[#065fd4] px-[6px] py-[2px] rounded-full font-bold border border-[#a4c2f4]">
+                                🔗 {task.links.length}
+                              </span>
+                              
+                              {/* The Tooltip Box (Hidden by default, flex on hover) */}
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[8px] hidden group-hover:flex flex-col gap-[6px] bg-[#333] text-white text-[13px] rounded-[8px] p-[10px] z-10 w-max max-w-[250px] shadow-lg">
+                                {task.links.map((link, i) => (
+                                  <a 
+                                    key={i} 
+                                    href={link.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-[#93c5fd] hover:text-[#bfdbfe] hover:underline text-left truncate block"
+                                  >
+                                    • {link.title || 'Link'}
+                                  </a>
+                                ))}
+                                {/* The little CSS triangle pointing down */}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-[#333]"></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className={tdStyles}><span className={`inline-block min-w-[71px] text-[.96em] font-bold text-white rounded-[16px] py-[3px] px-[17px] mr-[7px] tracking-[1px] align-middle ${getFactorClass(task.factor)}`}>{task.factor}</span></td>
                       <td className={tdStyles}>({formatDate(task.last_date)})</td>
                       <td className={tdStyles}>
