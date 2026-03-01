@@ -254,7 +254,7 @@ function App() {
     const query = searchQuery.toLowerCase();
     const matchesFactor = filterFactor === 'All' || task.factor === filterFactor;
     // Date filter: Only check if filterDate is actually set
-    const matchesDate = filterDate === '' || task.last_date === filterDate;
+    const matchesDate = filterDate === '' || task.last_date <= filterDate;
     
     const matchesName = task.name.toLowerCase().includes(query);
     const matchesLinks = task.links ? task.links.some(l => (l.title || '').toLowerCase().includes(query)) : false;
