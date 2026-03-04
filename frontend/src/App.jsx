@@ -573,7 +573,7 @@ function App() {
   });
 
   // ✨ FILTER AND SORT COMPLETED TASKS
-  const completedTasks = tasks.filter(task => {
+  const filteredCompletedTasks = tasks.filter(task => {
     if (!task.completed) return false;
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;

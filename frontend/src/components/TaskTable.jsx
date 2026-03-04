@@ -41,7 +41,7 @@ function TaskTable({
           
           const isTarget = !isCompleted && task.last_date === targetDate;
           const highlightClasses = isTarget
-            ? "ring-2 ring-orange-400 dark:ring-orange-500 bg-orange-50/80 dark:bg-slate-700/80 shadow-md md:shadow-none"
+            ? "ring-2 ring-inset ring-orange-400 dark:ring-orange-500 bg-orange-50/80 dark:bg-slate-700/80 shadow-md md:shadow-none"
             : "border border-orange-100 dark:border-slate-700 md:border-none bg-white dark:bg-slate-800 md:bg-transparent shadow-sm md:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700";
 
           return (
