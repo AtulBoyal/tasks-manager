@@ -7,6 +7,7 @@ import Header from './components/Header';
 import TaskForm from './components/TaskForm';
 import TaskTable from './components/TaskTable';
 import FilterBar from './components/FilterBar';
+import ConsistencyHeatmap from './components/ConsistencyHeatmap';
 
 // ============================================================================
 // WEBAUTHN UTILITY FUNCTIONS (THE BUFFER CONVERSIONS)
@@ -368,6 +369,8 @@ function App() {
               handleSyncToCloud={handleSyncToCloud}
               isSyncing={isSyncing}
             />
+
+            <ConsistencyHeatmap tasks={tasks} />
 
             <TaskForm 
               taskName={taskName} 
