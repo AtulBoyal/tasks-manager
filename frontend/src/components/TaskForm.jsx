@@ -1,4 +1,5 @@
 import React from 'react';
+import { generateAutoTags } from '../utils/tagEngine';
 
 function TaskForm({
   taskName, setTaskName,
