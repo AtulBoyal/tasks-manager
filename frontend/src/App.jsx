@@ -302,6 +302,7 @@ function App() {
       }
       localStorage.setItem('last_habit_reset', todayStr);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks]);
 
   const handleToggleSubtask = (taskId, subtaskId) => {
