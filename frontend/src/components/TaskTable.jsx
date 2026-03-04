@@ -18,7 +18,7 @@ function TaskTable({
   const tdStyles = "block md:table-cell py-1.5 md:py-[10px] px-0 md:px-[8px] border-b border-orange-50/50 dark:border-slate-700/50 md:border-b-[1.2px] last:border-0 md:group-last:border-b-0 text-black dark:text-slate-200 text-left md:text-center";
 
   return (
-    <div className="w-full overflow-x-auto overflow-y-hidden pb-4 px-1">
+    <div className="w-full overflow-x-auto md:overflow-visible md:pb-0 pb-4 px-1">
       <table className="w-full block md:table mt-[8px] md:border-separate md:border-spacing-0 md:rounded-[12px] md:shadow-[0_1px_10px_#ffd99a10] md:dark:shadow-none md:bg-[#fffdfa] md:dark:bg-slate-900 transition-colors duration-300">
         <thead className="hidden md:table-header-group">
           <tr>
