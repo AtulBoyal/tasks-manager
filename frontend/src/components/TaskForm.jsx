@@ -4,7 +4,9 @@ import { generateAutoTags } from '../utils/tagEngine';
 function TaskForm({
   taskName, setTaskName,
   factor, setFactor,
-  lastDate, setLastDate, todayDate,
+  lastDate, setLastDate,
+  startDate, setStartDate,
+  todayDate,
   currentTagInput, setCurrentTagInput, handleAddTag,
   taskTags, setTaskTags,
   taskLinks, setTaskLinks,
@@ -49,9 +51,30 @@ function TaskForm({
           </select>
         </div>
         
-        <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-between sm:justify-start gap-[9px]">
-          <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">Last Date: </label>
-          <input type="date" className={`${inputStyles} w-full sm:w-auto`} value={lastDate} min={todayDate} onChange={e => setLastDate(e.target.value)} required />
+        {/* ✨ DATES: APPEARS ON & DEADLINE */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          {/* Start Date (Deferred) */}
+          <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-900/40 px-3 py-2 rounded-lg border border-orange-100 dark:border-slate-700">
+            <label className="font-bold text-[#c57415] dark:text-orange-400 text-sm whitespace-nowrap">⏳ Appears On:</label>
+            <input 
+              type="date" 
+              className="bg-transparent text-black dark:text-white font-semibold outline-none text-sm cursor-pointer" 
+              value={startDate || ''} 
+              onChange={e => setStartDate(e.target.value)} 
+            />
+          </div>
+
+          {/* Deadline (Now Optional) */}
+          <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-900/40 px-3 py-2 rounded-lg border border-orange-100 dark:border-slate-700">
+            <label className="font-bold text-[#c57415] dark:text-orange-400 text-sm whitespace-nowrap">🎯 Deadline:</label>
+            <input 
+              type="date" 
+              className="bg-transparent text-black dark:text-white font-semibold outline-none text-sm cursor-pointer" 
+              value={lastDate || ''} 
+              onChange={e => setLastDate(e.target.value)} 
+              // ✨ Notice we removed the "required" attribute here!
+            />
+          </div>
         </div>
 
         {/* ✨ ADVANCED RECURRENCE DROPDOWN */}

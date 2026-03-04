@@ -69,6 +69,7 @@ function App() {
   const [filterDate, setFilterDate] = useState(''); 
   const [filterStatus, setFilterStatus] = useState('Active'); 
   const [showCompleted, setShowCompleted] = useState(false);  
+  const [startDate, setStartDate] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [hasBiometricSetup, setHasBiometricSetup] = useState(false);
@@ -298,23 +299,28 @@ function App() {
           if (compDate !== todayStr && compDate !== '') {
             needsUpdate = true;
             
-            // Calculate the new deadline based on the old deadline
-            let newDeadline = new Date(t.last_date || todayStr);
+            // Calculate the new dates
+            let newDeadline = t.last_date ? new Date(t.last_date) : null;
+            let newStartDate = t.start_date ? new Date(t.start_date) : null;
             
             if (t.recurrence === 'daily') {
-              newDeadline = new Date(); // Daily always targets today
+              if (newDeadline) newDeadline = new Date(); 
+              if (newStartDate) newStartDate = new Date();
             } else if (t.recurrence === 'weekly') {
-              newDeadline.setDate(newDeadline.getDate() + 7); // Adds exactly 7 days
+              if (newDeadline) newDeadline.setDate(newDeadline.getDate() + 7); 
+              if (newStartDate) newStartDate.setDate(newStartDate.getDate() + 7);
             } else if (t.recurrence === 'monthly') {
-              newDeadline.setMonth(newDeadline.getMonth() + 1); // Safely jumps to next month
+              if (newDeadline) newDeadline.setMonth(newDeadline.getMonth() + 1); 
+              if (newStartDate) newStartDate.setMonth(newStartDate.getMonth() + 1);
             }
 
-            // Uncheck the task, apply the new target date, and uncheck all subtasks!
+            // Uncheck the task and apply the new dates!
             return { 
               ...t, 
               completed: false, 
               completion_date: null,
-              last_date: newDeadline.toISOString().split('T')[0],
+              last_date: newDeadline ? newDeadline.toISOString().split('T')[0] : '',
+              start_date: newStartDate ? newStartDate.toISOString().split('T')[0] : '',
               subtasks: t.subtasks ? t.subtasks.map(st => ({...st, completed: false})) : []
             };
           }
@@ -490,18 +496,19 @@ function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
     let updatedTasks;
-    
+    const smartTags = generateAutoTags(taskName, taskTags);
+
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags, subtasks: subtasks, recurrence: recurrence } : t
+        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, start_date: startDate, links: taskLinks, tags: taskTags, subtasks: subtasks, recurrence: recurrence } : t
       );
     } else {
-      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, completed: false, links: taskLinks, tags: taskTags, subtasks: subtasks, recurrence: recurrence }];
+      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, start_date: startDate, completed: false, links: taskLinks, tags: smartTags, subtasks: subtasks, recurrence: recurrence }];
     }
     updateLocalTasks(updatedTasks);
     
     // Reset everything
-    setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setRecurrence('none'); setEditingTaskId(null);
+    setTaskName(''); setFactor('Normal'); setLastDate(''); setStartDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setRecurrence('none'); setEditingTaskId(null);
   };
 
   const handleDelete = (id) => updateLocalTasks(tasks.filter(t => t.id !== id));
@@ -509,9 +516,11 @@ function App() {
   const handleUndoComplete = (task) => updateLocalTasks(tasks.map(t => t.id === task.id ? { ...t, completed: false, completion_date: null } : t));
 
   const handleEdit = (task) => {
-    setTaskName(task.name); setFactor(task.factor); setLastDate(task.last_date);
+    setTaskName(task.name); setFactor(task.factor); 
+    setLastDate(task.last_date || ''); 
+    setStartDate(task.start_date || ''); // ✨ Load start date
     setTaskLinks(task.links || []); setTaskTags(task.tags || []); setSubtasks(task.subtasks || []); 
-    setRecurrence(task.recurrence || 'none'); // ✨ LOAD RECURRENCE
+    setRecurrence(task.recurrence || 'none');
     setEditingTaskId(task.id);
   };
 
@@ -543,17 +552,27 @@ function App() {
     return matchesFactor && matchesDate && (matchesName || matchesLinks || matchesTags);
   };
 
-  const filteredActiveTasks = [...tasks].filter(task => !task.completed).filter(matchesSearchAndFilter).sort((a,b) => {
-      const dA = new Date(a.last_date), dB = new Date(b.last_date);
-      if(dA < dB) return -1; if(dA > dB) return 1;
-      return difficultyOrder[a.factor] - difficultyOrder[b.factor];
-    });
+  const currentDateStr = new Date().toISOString().split('T')[0];
+
+  // ✨ HIDE TASKS IF THEIR START DATE IS IN THE FUTURE
+  const filteredActiveTasks = tasks.filter(task => {
+    if (task.completed) return false;
+    
+    // If a start_date exists and it is strictly greater than today, hide it!
+    if (task.start_date && task.start_date > currentDateStr) return false;
+
+    // Normal filtering logic...
+    if (filterStatus === 'Active' && filterDate && task.last_date !== filterDate) return false;
+    if (filterStatus !== 'Active' && filterStatus !== 'All' && task.factor !== filterStatus) return false;
+    if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
 
   const filteredCompletedTasks = [...tasks].filter(task => task.completed).filter(matchesSearchAndFilter).sort((a, b) => {
-      const dA = new Date(a.last_date), dB = new Date(b.last_date);
-      if(dA < dB) return 1; if(dA > dB) return -1;
-      return difficultyOrder[a.factor] - difficultyOrder[b.factor];
-    });
+    const dA = new Date(a.last_date), dB = new Date(b.last_date);
+    if(dA < dB) return 1; if(dA > dB) return -1;
+    return difficultyOrder[a.factor] - difficultyOrder[b.factor];
+  });
 
   return (
     <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300 pb-[40px]">
@@ -605,6 +624,8 @@ function App() {
               setCurrentSubtaskInput={setCurrentSubtaskInput}
               recurrence={recurrence}
               setRecurrence={setRecurrence}
+              startDate={startDate}
+              setStartDate={setStartDate}
             />
 
             {/* --- FILTER BAR & ACTIVE TASKS --- */}
