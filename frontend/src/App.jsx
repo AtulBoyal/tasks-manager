@@ -71,6 +71,7 @@ function App() {
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [hasBiometricSetup, setHasBiometricSetup] = useState(false);
+  const [isDaily, setIsDaily] = useState(false);
 
   // --- QUICK ADD STATE & LISTENERS ---
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -271,6 +272,38 @@ function App() {
     };
   }, [passwordOk]);
 
+  // ============================================================================
+  // DAILY HABIT "LAZY RESET" ENGINE
+  // ============================================================================
+  useEffect(() => {
+    if (tasks.length === 0) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const lastReset = localStorage.getItem('last_habit_reset');
+
+    // If we haven't checked today, scan the database for completed habits
+    if (lastReset !== todayStr) {
+      let needsUpdate = false;
+      const resetTasks = tasks.map(t => {
+        // If it is a daily habit, and it is marked completed...
+        if (t.is_daily && t.completed) {
+          const compDate = t.completion_date ? t.completion_date.split('T')[0] : '';
+          // ...but it wasn't completed TODAY, uncheck it!
+          if (compDate !== todayStr) {
+            needsUpdate = true;
+            return { ...t, completed: false, completion_date: null };
+          }
+        }
+        return t;
+      });
+
+      if (needsUpdate) {
+        updateLocalTasks(resetTasks);
+      }
+      localStorage.setItem('last_habit_reset', todayStr);
+    }
+  }, [tasks]);
+
   const handleToggleSubtask = (taskId, subtaskId) => {
     const updatedTasks = tasks.map(t => {
       if (t.id === taskId && t.subtasks) {
@@ -357,14 +390,14 @@ function App() {
     let updatedTasks;
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags, subtasks: subtasks } : t
+        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags, subtasks: subtasks, is_daily: isDaily } : t
       );
     } else {
-      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, completed: false, links: taskLinks, tags: taskTags, subtasks: subtasks }];
+      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, completed: false, links: taskLinks, tags: taskTags, subtasks: subtasks, is_daily: isDaily }];
     }
     updateLocalTasks(updatedTasks);
     // Reset everything
-    setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setEditingTaskId(null);
+    setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setIsDaily(false); setEditingTaskId(null);
   };
 
   const handleDelete = (id) => updateLocalTasks(tasks.filter(t => t.id !== id));
@@ -373,8 +406,8 @@ function App() {
 
   const handleEdit = (task) => {
     setTaskName(task.name); setFactor(task.factor); setLastDate(task.last_date);
-    setTaskLinks(task.links || []); setTaskTags(task.tags || []); 
-    setSubtasks(task.subtasks || []);
+    setTaskLinks(task.links || []); setTaskTags(task.tags || []); setSubtasks(task.subtasks || []); 
+    setIsDaily(task.is_daily || false);
     setEditingTaskId(task.id);
   };
 
@@ -466,6 +499,8 @@ function App() {
               setSubtasks={setSubtasks}
               currentSubtaskInput={currentSubtaskInput}
               setCurrentSubtaskInput={setCurrentSubtaskInput}
+              isDaily={isDaily}
+              setIsDaily={setIsDaily}
             />
 
             {/* --- FILTER BAR & ACTIVE TASKS --- */}
@@ -481,9 +516,34 @@ function App() {
               {/* Only render the Active table if we are in 'Active' or 'All' view */}
               {(filterStatus === 'Active' || filterStatus === 'All') && (
                 <>
-                  <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px]">My Tasks</h2>
+                  {/* ✨ DAILY HABITS SECTION */}
+                  {filteredActiveTasks.some(t => t.is_daily) && (
+                    <div className="mb-8">
+                      <h2 className="text-center font-extrabold text-[1.5rem] text-[#cc6000] dark:text-orange-500 mb-2 flex items-center justify-center gap-2">
+                        <span>🔁</span> Daily Habits
+                      </h2>
+                      <TaskTable 
+                        tasks={filteredActiveTasks.filter(t => t.is_daily)}
+                        isCompleted={false}
+                        todayDate={todayDate}
+                        targetDate={filterDate || todayDate}
+                        formatDate={formatDate}
+                        getFactorClass={getFactorClass}
+                        handleInlineUpdate={handleInlineUpdate}
+                        handleEdit={handleEdit}
+                        handleDelete={handleDelete}
+                        handleComplete={handleComplete}
+                        handleToggleSubtask={handleToggleSubtask}
+                      />
+                    </div>
+                  )}
+
+                  {/* STANDARD ACTIVE TASKS */}
+                  <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px] mt-4">
+                    Active Tasks
+                  </h2>
                   <TaskTable 
-                    tasks={filteredActiveTasks}
+                    tasks={filteredActiveTasks.filter(t => !t.is_daily)}
                     isCompleted={false}
                     todayDate={todayDate}
                     targetDate={filterDate || todayDate}

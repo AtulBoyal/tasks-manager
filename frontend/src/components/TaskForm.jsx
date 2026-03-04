@@ -7,9 +7,10 @@ function TaskForm({
   currentTagInput, setCurrentTagInput, handleAddTag,
   taskTags, setTaskTags,
   taskLinks, setTaskLinks,
+  subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput,
   editingTaskId, setEditingTaskId,
-  subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput, handleToggleSubtask,
-  handleSubmit
+  handleSubmit,
+  isDaily, setIsDaily
 }) {
   
   const inputStyles = "px-[13px] py-[8px] rounded-[9px] border-[1.2px] border-[#ffd180] dark:border-slate-600 bg-[#fff9f2] dark:bg-slate-700 min-w-[135px] text-[1em] text-black dark:text-white outline-none transition-colors shadow-[inset_0_1px_4px_#fff6ed80] focus:border-[#ffb935] focus:dark:border-orange-400 focus:bg-[#fffbf1] focus:dark:bg-slate-600";
@@ -38,6 +39,19 @@ function TaskForm({
         <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-between sm:justify-start gap-[9px]">
           <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">Last Date: </label>
           <input type="date" className={`${inputStyles} w-full sm:w-auto`} value={lastDate} min={todayDate} onChange={e => setLastDate(e.target.value)} required />
+        </div>
+
+        {/* ✨ NEW DAILY HABIT TOGGLE */}
+        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-[12px] mt-1 mb-2 bg-white/40 dark:bg-slate-900/40 px-3 py-2 rounded-lg border border-orange-100 dark:border-slate-700">
+          <label className="font-bold text-[#c57415] dark:text-orange-400 cursor-pointer flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              checked={isDaily} 
+              onChange={(e) => setIsDaily(e.target.checked)}
+              className="w-5 h-5 accent-orange-500 cursor-pointer"
+            />
+            🔁 Recurring Daily Habit
+          </label>
         </div>
 
         <div className="flex flex-col gap-[8px] w-full mt-2">
