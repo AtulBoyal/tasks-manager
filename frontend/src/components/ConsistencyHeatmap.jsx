@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 
 function ConsistencyHeatmap({ tasks }) {
-  // 1. Generate the last 84 days (12 weeks)
-  const daysToTrack = 15;
+  // 1. Generate the last 28 days (4 weeks)
+  const daysToTrack = 28;
   
   const heatmapData = useMemo(() => {
     // Create a map of { 'YYYY-MM-DD': count }
@@ -63,7 +63,7 @@ function ConsistencyHeatmap({ tasks }) {
       <div className="flex justify-between items-end mb-4">
         <div>
           <h2 className="text-xl font-bold text-[#cc6000] dark:text-orange-400">Activity Heatmap</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Last 12 weeks of productivity</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Last 4 weeks of productivity</p>
         </div>
         <div className="text-right">
           <div className="text-2xl font-extrabold text-[#f57c00] dark:text-orange-500">
