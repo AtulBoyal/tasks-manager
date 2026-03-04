@@ -4,6 +4,7 @@ function TaskTable({
   tasks,
   isCompleted,
   todayDate,
+  targetDate, // ✨ NEW PROP
   formatDate,
   getFactorClass,
   handleInlineUpdate,
@@ -13,8 +14,6 @@ function TaskTable({
   handleUndoComplete
 }) {
   const thStyles = "py-[10px] px-[9px] bg-[#ffe6ba] dark:bg-slate-800 text-[#b06d0e] dark:text-orange-400 text-[15.5px] font-[750] border-b-[2px] border-b-[#ffd59e] dark:border-b-slate-700 last:pr-0";
-  
-  // Tighter vertical padding for mobile (py-1.5)
   const tdStyles = "block md:table-cell py-1.5 md:py-[10px] px-0 md:px-[8px] border-b border-orange-50/50 dark:border-slate-700/50 md:border-b-[1.2px] last:border-0 md:group-last:border-b-0 text-black dark:text-slate-200 text-left md:text-center";
 
   return (
@@ -37,16 +36,23 @@ function TaskTable({
             </td>
           </tr>     
         )}
-        {tasks.map((task, idx) => (
-          // Reduced mobile padding (p-3) and bottom margin (mb-2.5)
-          <tr key={task.id} className={`block md:table-row bg-white dark:bg-slate-800 md:bg-transparent rounded-[10px] md:rounded-none mb-2.5 md:mb-0 p-3 md:p-0 shadow-sm md:shadow-none border border-orange-100 dark:border-slate-700 md:border-none group hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${isCompleted ? 'opacity-80 md:opacity-100' : ''}`}>
+        {tasks.map((task, idx) => {
+          
+          // ✨ NEW: Highlight Logic!
+          const isTarget = !isCompleted && task.last_date === targetDate;
+          const highlightClasses = isTarget
+            ? "ring-2 ring-orange-400 dark:ring-orange-500 bg-orange-50/80 dark:bg-slate-700/80 shadow-md md:shadow-none transform md:scale-[1.01]"
+            : "border border-orange-100 dark:border-slate-700 md:border-none bg-white dark:bg-slate-800 md:bg-transparent shadow-sm md:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700";
+
+          return (
+          <tr key={task.id} className={`block md:table-row rounded-[10px] md:rounded-none mb-2.5 md:mb-0 p-3 md:p-0 transition-all duration-200 group ${highlightClasses} ${isCompleted ? 'opacity-80 md:opacity-100' : ''}`}>
             
             <td className={`${tdStyles} hidden md:table-cell`}>{idx+1}.</td>
             
             {/* TASK NAME & TAGS */}
             <td className={`${tdStyles} flex flex-col items-start md:items-center ${isCompleted ? 'text-[#888] dark:text-slate-500' : ''}`}>
               <div className="flex flex-wrap items-center gap-2 mb-1 md:mb-0">
-                <span className={!isCompleted && task.last_date === todayDate ? 'text-black dark:text-white font-bold text-base' : `text-black dark:text-slate-200 text-base ${isCompleted ? '' : 'font-semibold md:font-normal'}`}>
+                <span className={isTarget ? 'text-black dark:text-white font-extrabold text-base' : `text-black dark:text-slate-200 text-base ${isCompleted ? '' : 'font-semibold md:font-normal'}`}>
                   {isCompleted ? <>✅ <span className="line-through md:no-underline">{task.name}</span></> : task.name}
                 </span>
                 
@@ -73,7 +79,7 @@ function TaskTable({
               )}
             </td>
 
-            {/* PRIORITY - Changed to inline-block w-1/2 for mobile side-by-side */}
+            {/* PRIORITY */}
             <td className={`${tdStyles} !border-none md:!border-b-[1.2px] inline-block w-1/2 md:w-auto align-top`}>
               <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:justify-center">
                 <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-[10px] uppercase tracking-wider">Priority</span>
@@ -95,7 +101,7 @@ function TaskTable({
               </div>
             </td>
 
-            {/* DEADLINE - Changed to inline-block w-1/2 for mobile side-by-side */}
+            {/* DEADLINE */}
             <td className={`${tdStyles} !border-none md:!border-b-[1.2px] inline-block w-1/2 md:w-auto align-top`}>
               <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:justify-center">
                 <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-[10px] uppercase tracking-wider">Deadline</span>
@@ -119,7 +125,7 @@ function TaskTable({
               </div>
             </td>
 
-            {/* COMPLETION DATE (Only shows if completed) */}
+            {/* COMPLETION DATE */}
             {isCompleted && (
               <td className={`${tdStyles} !border-none md:!border-b-[1.2px] block w-full md:w-auto align-top mt-1 md:mt-0`}>
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:justify-center">
@@ -129,7 +135,7 @@ function TaskTable({
               </td>
             )}
 
-            {/* ACTIONS - Grouped into a neat row */}
+            {/* ACTIONS */}
             <td className={`${tdStyles} block w-full md:w-auto md:table-cell pt-2 md:pt-[10px] mt-1 md:mt-0 border-t border-orange-50 dark:border-slate-700 md:border-none`}>
               {isCompleted ? (
                 <button className="w-full md:w-auto bg-orange-50 dark:bg-slate-700/50 md:bg-transparent border-none text-[1.15em] cursor-pointer py-[4px] px-[12px] md:px-[5px] text-[#f89c0e] hover:text-[#d37800] dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2" onClick={() => handleUndoComplete(task)} title="Mark as Incomplete">
@@ -146,7 +152,7 @@ function TaskTable({
               )}
             </td>
           </tr>
-        ))}
+        );})}
       </tbody>
     </table>
   );

@@ -302,11 +302,10 @@ function App() {
   const difficultyOrder = { 'Urgent': 1, 'Normal': 2, 'Later': 3 };
   const todayDate = new Date().toISOString().split('T')[0];
 
-  // --- UPDATED: No longer filters out Active/Completed so both arrays are always available ---
   const matchesSearchAndFilter = (task) => {
     const query = searchQuery.toLowerCase();
     const matchesFactor = filterFactor === 'All' || task.factor === filterFactor;
-    const matchesDate = filterDate === '' || task.last_date === filterDate;
+    const matchesDate = filterDate === '' || task.last_date <= filterDate;
     
     const matchesName = task.name.toLowerCase().includes(query);
     const matchesLinks = task.links ? task.links.some(l => (l.title || '').toLowerCase().includes(query)) : false;
@@ -390,6 +389,7 @@ function App() {
                     tasks={filteredActiveTasks}
                     isCompleted={false}
                     todayDate={todayDate}
+                    targetDate={filterDate || todayDate}
                     formatDate={formatDate}
                     getFactorClass={getFactorClass}
                     handleInlineUpdate={handleInlineUpdate}

@@ -49,9 +49,12 @@ function FilterBar({
         
         <div className="w-full md:w-auto relative group flex items-center">
           <input 
-            type="date" 
+            type={filterDate ? "date" : "text"} 
+            placeholder="Select date..."
             value={filterDate} 
             onChange={e => setFilterDate(e.target.value)}
+            onFocus={(e) => e.target.type = 'date'}
+            onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
             className={`${inputStyles} w-full min-w-[140px] cursor-pointer`}
             title="Filter tasks by exact date"
           />
