@@ -24,7 +24,19 @@ function TaskForm({
         
         <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-between sm:justify-start gap-[9px]">
           <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">Task: </label>
-          <input type="text" className={`${inputStyles} w-full sm:w-auto`} value={taskName} onChange={e => setTaskName(e.target.value)} required />
+          <input 
+            type="text" 
+            className={`${inputStyles} w-full sm:w-auto`} 
+            value={taskName} 
+            onChange={e => setTaskName(e.target.value)} 
+            // ✨ ADD THIS onBlur EVENT:
+            onBlur={() => {
+              const autoTags = generateAutoTags(taskName);
+              // Merge auto-tags with any tags the user already typed manually
+              setTaskTags(prev => Array.from(new Set([...prev, ...autoTags])));
+            }}
+            required 
+          />
         </div>
         
         <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-between sm:justify-start gap-[9px]">

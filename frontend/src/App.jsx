@@ -10,6 +10,7 @@ import FilterBar from './components/FilterBar';
 import ConsistencyHeatmap from './components/ConsistencyHeatmap';
 import QuickAddModal from './components/QuickAddModal';
 import { supabase } from './supabaseClient';
+import { generateAutoTags } from '../utils/tagEngine';
 
 // ============================================================================
 // WEBAUTHN UTILITY FUNCTIONS (THE BUFFER CONVERSIONS)
@@ -92,14 +93,19 @@ function App() {
 
   // The function that saves the quick task
   const handleQuickAdd = (newTitle) => {
+    
+    // ✨ Run the Quick Add text through the NLP engine
+    const smartTags = generateAutoTags(newTitle, []);
+
     const newTask = {
       id: Date.now(),
       name: newTitle,
-      factor: 'Normal', // Defaults
-      last_date: todayDate, // Defaults to today
+      factor: 'Normal',
+      last_date: todayDate,
       completed: false,
+      is_daily: false,
       links: [],
-      tags: [],
+      tags: smartTags, // Automatically applies the generated tags
       subtasks: []
     };
     updateLocalTasks([...tasks, newTask]);
