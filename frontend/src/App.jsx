@@ -489,7 +489,7 @@ function App() {
                         onChange={e => setFilterStatus(e.target.value)}
                         className={`${inputStyles} w-full min-w-[130px] cursor-pointer`}
                       >
-                        <option value="All">All Statuses</option>
+                        <option value="All">All</option>
                         <option value="Active">Active Only</option>
                         <option value="Completed">Completed Only</option>
                       </select>
@@ -625,7 +625,7 @@ function App() {
             )}
             
             {/* --- COMPLETED TASKS TABLE (COLLAPSIBLE) --- */}
-            {(filterStatus === 'Completed' || filterStatus === 'All') && tasks.some(task => task.completed) && (
+            {(filterStatus === 'Completed' || filterStatus === 'All' || filterStatus === 'Active') && tasks.some(task => task.completed) && (
               <div className="w-[96vw] max-w-[900px] mx-auto mt-[34px] rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[12px] sm:px-[18px] pb-[22px] mb-[40px] transition-colors duration-300">
                 
                 <div 
