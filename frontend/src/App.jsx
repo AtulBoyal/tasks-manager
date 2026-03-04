@@ -371,19 +371,6 @@ function App() {
   const handleComplete = (task) => updateLocalTasks(tasks.map(t => t.id === task.id ? { ...t, completed: true, completion_date: new Date().toISOString() } : t));
   const handleUndoComplete = (task) => updateLocalTasks(tasks.map(t => t.id === task.id ? { ...t, completed: false, completion_date: null } : t));
 
-  const handleSyncToCloud = async () => {
-    setIsSyncing(true);
-    try {
-      await apiStorage.saveTasks(tasks, enteredPassword);
-      setHasUnsavedChanges(false);
-      localStorage.setItem('task_manager_unsaved', 'false'); 
-    } catch (error) {
-      alert('GitHub Sync Failed. Changes stored locally.');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleEdit = (task) => {
     setTaskName(task.name); setFactor(task.factor); setLastDate(task.last_date);
     setTaskLinks(task.links || []); setTaskTags(task.tags || []); 
@@ -452,7 +439,6 @@ function App() {
               hasUnsavedChanges={hasUnsavedChanges}
               isDarkMode={isDarkMode}
               setIsDarkMode={setIsDarkMode}
-              handleSyncToCloud={handleSyncToCloud}
               isSyncing={isSyncing}
             />
 
