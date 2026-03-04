@@ -72,7 +72,7 @@ function App() {
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [hasBiometricSetup, setHasBiometricSetup] = useState(false);
-  const [isDaily, setIsDaily] = useState(false);
+  const [recurrence, setRecurrence] = useState('none');
 
   // --- QUICK ADD STATE & LISTENERS ---
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -93,7 +93,6 @@ function App() {
 
   // The function that saves the quick task
   const handleQuickAdd = (newTitle) => {
-    
     // ✨ Run the Quick Add text through the NLP engine
     const smartTags = generateAutoTags(newTitle, []);
 
@@ -103,7 +102,7 @@ function App() {
       factor: 'Normal',
       last_date: todayDate,
       completed: false,
-      is_daily: false,
+      recurrence: 'none',
       links: [],
       tags: smartTags, // Automatically applies the generated tags
       subtasks: []
@@ -279,7 +278,7 @@ function App() {
   }, [passwordOk]);
 
   // ============================================================================
-  // DAILY HABIT "LAZY RESET" ENGINE
+  // ADVANCED RECURRENCE "LAZY RESET" ENGINE
   // ============================================================================
   useEffect(() => {
     if (tasks.length === 0) return;
@@ -287,17 +286,37 @@ function App() {
     const todayStr = new Date().toISOString().split('T')[0];
     const lastReset = localStorage.getItem('last_habit_reset');
 
-    // If we haven't checked today, scan the database for completed habits
     if (lastReset !== todayStr) {
       let needsUpdate = false;
+      
       const resetTasks = tasks.map(t => {
-        // If it is a daily habit, and it is marked completed...
-        if (t.is_daily && t.completed) {
+        // Only process completed tasks that actually have a recurrence rule
+        if (t.completed && t.recurrence && t.recurrence !== 'none') {
           const compDate = t.completion_date ? t.completion_date.split('T')[0] : '';
-          // ...but it wasn't completed TODAY, uncheck it!
-          if (compDate !== todayStr) {
+          
+          // If it was NOT completed today, it's time to reset it for the next cycle
+          if (compDate !== todayStr && compDate !== '') {
             needsUpdate = true;
-            return { ...t, completed: false, completion_date: null };
+            
+            // Calculate the new deadline based on the old deadline
+            let newDeadline = new Date(t.last_date || todayStr);
+            
+            if (t.recurrence === 'daily') {
+              newDeadline = new Date(); // Daily always targets today
+            } else if (t.recurrence === 'weekly') {
+              newDeadline.setDate(newDeadline.getDate() + 7); // Adds exactly 7 days
+            } else if (t.recurrence === 'monthly') {
+              newDeadline.setMonth(newDeadline.getMonth() + 1); // Safely jumps to next month
+            }
+
+            // Uncheck the task, apply the new target date, and uncheck all subtasks!
+            return { 
+              ...t, 
+              completed: false, 
+              completion_date: null,
+              last_date: newDeadline.toISOString().split('T')[0],
+              subtasks: t.subtasks ? t.subtasks.map(st => ({...st, completed: false})) : []
+            };
           }
         }
         return t;
@@ -355,7 +374,7 @@ function App() {
                   factor: 'Urgent', 
                   last_date: contestDateStr,
                   completed: false,
-                  is_daily: false,
+                  recurrence: 'none',
                   links: [{ title: 'Registration / Contest Page', url: 'https://codeforces.com/contests' }],
                   tags: ['codeforces', 'contest'],
                   subtasks: [
@@ -471,16 +490,18 @@ function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
     let updatedTasks;
+    
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags, subtasks: subtasks, is_daily: isDaily } : t
+        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags, subtasks: subtasks, recurrence: recurrence } : t
       );
     } else {
-      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, completed: false, links: taskLinks, tags: taskTags, subtasks: subtasks, is_daily: isDaily }];
+      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, completed: false, links: taskLinks, tags: taskTags, subtasks: subtasks, recurrence: recurrence }];
     }
     updateLocalTasks(updatedTasks);
+    
     // Reset everything
-    setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setIsDaily(false); setEditingTaskId(null);
+    setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setRecurrence('none'); setEditingTaskId(null);
   };
 
   const handleDelete = (id) => updateLocalTasks(tasks.filter(t => t.id !== id));
@@ -490,7 +511,7 @@ function App() {
   const handleEdit = (task) => {
     setTaskName(task.name); setFactor(task.factor); setLastDate(task.last_date);
     setTaskLinks(task.links || []); setTaskTags(task.tags || []); setSubtasks(task.subtasks || []); 
-    setIsDaily(task.is_daily || false);
+    setRecurrence(task.recurrence || 'none'); // ✨ LOAD RECURRENCE
     setEditingTaskId(task.id);
   };
 
@@ -582,8 +603,8 @@ function App() {
               setSubtasks={setSubtasks}
               currentSubtaskInput={currentSubtaskInput}
               setCurrentSubtaskInput={setCurrentSubtaskInput}
-              isDaily={isDaily}
-              setIsDaily={setIsDaily}
+              recurrence={recurrence}
+              setRecurrence={setRecurrence}
             />
 
             {/* --- FILTER BAR & ACTIVE TASKS --- */}
@@ -600,13 +621,13 @@ function App() {
               {(filterStatus === 'Active' || filterStatus === 'All') && (
                 <>
                   {/* ✨ DAILY HABITS SECTION */}
-                  {filteredActiveTasks.some(t => t.is_daily) && (
+                  {filteredActiveTasks.some(t => t.recurrence && t.recurrence !== 'none') && (
                     <div className="mb-8">
                       <h2 className="text-center font-extrabold text-[1.5rem] text-[#cc6000] dark:text-orange-500 mb-2 flex items-center justify-center gap-2">
                         <span>🔁</span> Daily Habits
                       </h2>
                       <TaskTable 
-                        tasks={filteredActiveTasks.filter(t => t.is_daily)}
+                        tasks={filteredActiveTasks.filter(t => t.recurrence && t.recurrence !== 'none')}
                         isCompleted={false}
                         todayDate={todayDate}
                         targetDate={filterDate || todayDate}
@@ -626,7 +647,7 @@ function App() {
                     Active Tasks
                   </h2>
                   <TaskTable 
-                    tasks={filteredActiveTasks.filter(t => !t.is_daily)}
+                    tasks={filteredActiveTasks.filter(t => !t.recurrence || t.recurrence === 'none')}
                     isCompleted={false}
                     todayDate={todayDate}
                     targetDate={filterDate || todayDate}

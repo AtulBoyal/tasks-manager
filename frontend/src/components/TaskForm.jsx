@@ -11,7 +11,7 @@ function TaskForm({
   subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput,
   editingTaskId, setEditingTaskId,
   handleSubmit,
-  isDaily, setIsDaily
+  recurrence, setRecurrence
 }) {
   
   const inputStyles = "px-[13px] py-[8px] rounded-[9px] border-[1.2px] border-[#ffd180] dark:border-slate-600 bg-[#fff9f2] dark:bg-slate-700 min-w-[135px] text-[1em] text-black dark:text-white outline-none transition-colors shadow-[inset_0_1px_4px_#fff6ed80] focus:border-[#ffb935] focus:dark:border-orange-400 focus:bg-[#fffbf1] focus:dark:bg-slate-600";
@@ -54,16 +54,20 @@ function TaskForm({
           <input type="date" className={`${inputStyles} w-full sm:w-auto`} value={lastDate} min={todayDate} onChange={e => setLastDate(e.target.value)} required />
         </div>
 
-        {/* ✨ NEW DAILY HABIT TOGGLE */}
+        {/* ✨ ADVANCED RECURRENCE DROPDOWN */}
         <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-[12px] mt-1 mb-2 bg-white/40 dark:bg-slate-900/40 px-3 py-2 rounded-lg border border-orange-100 dark:border-slate-700">
-          <label className="font-bold text-[#c57415] dark:text-orange-400 cursor-pointer flex items-center gap-2">
-            <input 
-              type="checkbox" 
-              checked={isDaily} 
-              onChange={(e) => setIsDaily(e.target.checked)}
-              className="w-5 h-5 accent-orange-500 cursor-pointer"
-            />
-            🔁 Recurring Daily Habit
+          <label className="font-bold text-[#c57415] dark:text-orange-400 flex items-center gap-2 text-sm">
+            <span>🔁</span> Recurrence:
+            <select 
+              value={recurrence} 
+              onChange={(e) => setRecurrence(e.target.value)}
+              className="ml-1 bg-transparent border-b border-orange-200 dark:border-slate-600 focus:border-orange-500 outline-none text-black dark:text-white font-semibold cursor-pointer"
+            >
+              <option value="none" className="bg-white dark:bg-slate-800">None (One-off)</option>
+              <option value="daily" className="bg-white dark:bg-slate-800">Daily</option>
+              <option value="weekly" className="bg-white dark:bg-slate-800">Weekly</option>
+              <option value="monthly" className="bg-white dark:bg-slate-800">Monthly</option>
+            </select>
           </label>
         </div>
 
