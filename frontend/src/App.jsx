@@ -8,6 +8,7 @@ import TaskForm from './components/TaskForm';
 import TaskTable from './components/TaskTable';
 import FilterBar from './components/FilterBar';
 import ConsistencyHeatmap from './components/ConsistencyHeatmap';
+import QuickAddModal from './components/QuickAddModal';
 
 // ============================================================================
 // WEBAUTHN UTILITY FUNCTIONS (THE BUFFER CONVERSIONS)
@@ -69,6 +70,38 @@ function App() {
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [hasBiometricSetup, setHasBiometricSetup] = useState(false);
+
+  // --- QUICK ADD STATE & LISTENERS ---
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
+  // Global Ctrl+K / Cmd+K listener
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault(); // Prevents browser search bar from focusing
+        if (passwordOk) {
+          setIsQuickAddOpen(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [passwordOk]);
+
+  // The function that saves the quick task
+  const handleQuickAdd = (newTitle) => {
+    const newTask = {
+      id: Date.now(),
+      name: newTitle,
+      factor: 'Normal', // Defaults
+      last_date: todayDate, // Defaults to today
+      completed: false,
+      links: [],
+      tags: [],
+      subtasks: []
+    };
+    updateLocalTasks([...tasks, newTask]);
+  };
 
   useEffect(() => {
     const credId = localStorage.getItem('biometric_credential_id');
@@ -471,6 +504,26 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* ✨ NEW: FLOATING ACTION BUTTON (Mobile Friendly) */}
+      {passwordOk && (
+        <button
+          onClick={() => setIsQuickAddOpen(true)}
+          title="Quick Add Task (Ctrl+K)"
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 w-14 h-14 bg-[linear-gradient(135deg,#f57c00_0%,#d84315_100%)] text-white rounded-full shadow-[0_4px_16px_rgba(245,124,0,0.5)] flex items-center justify-center text-3xl z-40 transition-transform hover:scale-110 active:scale-95"
+        >
+          +
+        </button>
+      )}
+
+      {/* ✨ NEW: THE MODAL */}
+      <QuickAddModal 
+        isOpen={isQuickAddOpen} 
+        onClose={() => setIsQuickAddOpen(false)} 
+        onQuickAdd={handleQuickAdd}
+        isDarkMode={isDarkMode}
+      />
+
       <Analytics />
     </div>
   );
