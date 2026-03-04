@@ -49,7 +49,7 @@ function TaskTable({
             key={task.id} 
             className={`block md:table-row rounded-[10px] md:rounded-none mb-2.5 md:mb-0 p-3 md:p-0 group relative ${highlightClasses} ${isCompleted ? 'opacity-80 md:opacity-100' : ''}`}
           >
-            <td className={`${tdStyles} hidden md:table-cell`}>{idx+1}.</td>
+            <td className={`${tdStyles} hidden md:table-cell align-top`}>{idx+1}.</td>
             
             {/* TASK NAME, TAGS & SUBTASKS */}
             <td className={`${tdStyles} flex flex-col items-start md:items-center ${isCompleted ? 'text-[#888] dark:text-slate-500' : ''}`}>
@@ -128,10 +128,12 @@ function TaskTable({
               <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:justify-center">
                 <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-[10px] uppercase tracking-wider">Deadline</span>
                 {isCompleted ? (
-                  <span className="text-sm md:text-base">{task.last_date ? formatDate(task.last_date) : 'No Deadline'}</span>
+                  <span className="text-sm md:text-base whitespace-nowrap">
+                    {task.last_date ? formatDate(task.last_date) : 'No Deadline'}
+                  </span>
                 ) : (
                   <div className="relative inline-flex items-center justify-center cursor-pointer group/date" title="Click to change date">
-                    <span className="text-sm md:text-base border-b border-dashed border-gray-400 dark:border-gray-500 group-hover/date:border-[#c57415] dark:group-hover/date:border-orange-400 group-hover/date:text-[#c57415] dark:group-hover/date:text-orange-400 transition-colors">
+                    <span className="text-sm md:text-base border-b border-dashed border-gray-400 dark:border-gray-500 group-hover/date:border-[#c57415] dark:group-hover/date:border-orange-400 group-hover/date:text-[#c57415] dark:group-hover/date:text-orange-400 transition-colors whitespace-nowrap">
                       {task.last_date ? formatDate(task.last_date) : 'No Deadline'}
                     </span>
                     <input
@@ -150,7 +152,7 @@ function TaskTable({
               <td className={`${tdStyles} !border-none md:!border-b-[1.2px] block w-full md:w-auto align-top mt-1 md:mt-0`}>
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:justify-center">
                   <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-[10px] uppercase tracking-wider">Completed On</span>
-                  <span className="text-sm md:text-base text-slate-500">{task.completion_date ? formatDate(task.completion_date) : ''}</span>
+                  <span className="text-sm md:text-base text-slate-500 whitespace-nowrap">{task.completion_date ? formatDate(task.completion_date) : ''}</span>
                 </div>
               </td>
             )}
