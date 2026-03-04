@@ -537,20 +537,7 @@ function App() {
     return '';
   };
 
-  const difficultyOrder = { 'Urgent': 1, 'Normal': 2, 'Later': 3 };
   const todayDate = new Date().toISOString().split('T')[0];
-
-  const matchesSearchAndFilter = (task) => {
-    const query = searchQuery.toLowerCase();
-    const matchesFactor = filterFactor === 'All' || task.factor === filterFactor;
-    const matchesDate = filterDate === '' || task.last_date <= filterDate;
-    
-    const matchesName = task.name.toLowerCase().includes(query);
-    const matchesLinks = task.links ? task.links.some(l => (l.title || '').toLowerCase().includes(query)) : false;
-    const matchesTags = task.tags ? task.tags.some(t => t.toLowerCase().includes(query)) : false;
-    
-    return matchesFactor && matchesDate && (matchesName || matchesLinks || matchesTags);
-  };
 
   // ✨ FILTER AND SORT ACTIVE TASKS
   const currentDateStr = new Date().toISOString().split('T')[0];
