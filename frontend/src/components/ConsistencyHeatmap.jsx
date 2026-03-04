@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 
 function ConsistencyHeatmap({ tasks }) {
   // 1. Generate the last 84 days (12 weeks)
-  const daysToTrack = 84;
+  const daysToTrack = 15;
   
   const heatmapData = useMemo(() => {
     // Create a map of { 'YYYY-MM-DD': count }
