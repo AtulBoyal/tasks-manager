@@ -50,6 +50,8 @@ function App() {
   const [taskLinks, setTaskLinks] = useState([]);
   const [taskTags, setTaskTags] = useState([]);
   const [currentTagInput, setCurrentTagInput] = useState('');
+  const [subtasks, setSubtasks] = useState([]);
+  const [currentSubtaskInput, setCurrentSubtaskInput] = useState('');
 
   const [enteredPassword, setEnteredPassword] = useState('');
   const [passwordOk, setPasswordOk] = useState(false);
@@ -195,6 +197,19 @@ function App() {
     }
   }, []);
 
+  const handleToggleSubtask = (taskId, subtaskId) => {
+    const updatedTasks = tasks.map(t => {
+      if (t.id === taskId && t.subtasks) {
+        const updatedSubtasks = t.subtasks.map(st => 
+          st.id === subtaskId ? { ...st, completed: !st.completed } : st
+        );
+        return { ...t, subtasks: updatedSubtasks };
+      }
+      return t;
+    });
+    updateLocalTasks(updatedTasks);
+  };
+
   const handleUnlock = async (pwd) => {
     setIsLoading(true);
     try {
@@ -255,13 +270,14 @@ function App() {
     let updatedTasks;
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags } : t
+        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, links: taskLinks, tags: taskTags, subtasks: subtasks } : t
       );
     } else {
-      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, completed: false, links: taskLinks, tags: taskTags }];
+      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, completed: false, links: taskLinks, tags: taskTags, subtasks: subtasks }];
     }
     updateLocalTasks(updatedTasks);
-    setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setEditingTaskId(null);
+    // Reset everything
+    setTaskName(''); setFactor('Normal'); setLastDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setEditingTaskId(null);
   };
 
   const handleDelete = (id) => updateLocalTasks(tasks.filter(t => t.id !== id));
@@ -283,7 +299,9 @@ function App() {
 
   const handleEdit = (task) => {
     setTaskName(task.name); setFactor(task.factor); setLastDate(task.last_date);
-    setTaskLinks(task.links || []); setTaskTags(task.tags || []); setEditingTaskId(task.id);
+    setTaskLinks(task.links || []); setTaskTags(task.tags || []); 
+    setSubtasks(task.subtasks || []);
+    setEditingTaskId(task.id);
   };
 
   const formatDate = (isoDate) => {
@@ -369,6 +387,10 @@ function App() {
               editingTaskId={editingTaskId} 
               setEditingTaskId={setEditingTaskId}
               handleSubmit={handleSubmit}
+              subtasks={subtasks}
+              setSubtasks={setSubtasks}
+              currentSubtaskInput={currentSubtaskInput}
+              setCurrentSubtaskInput={setCurrentSubtaskInput}
             />
 
             {/* --- FILTER BAR & ACTIVE TASKS --- */}
@@ -396,6 +418,7 @@ function App() {
                     handleEdit={handleEdit}
                     handleDelete={handleDelete}
                     handleComplete={handleComplete}
+                    handleToggleSubtask={handleToggleSubtask}
                   />
                 </>
               )}
@@ -437,6 +460,7 @@ function App() {
                     formatDate={formatDate}
                     getFactorClass={getFactorClass}
                     handleUndoComplete={handleUndoComplete}
+                    handleToggleSubtask={handleToggleSubtask}
                   />
                 )}
               </div>

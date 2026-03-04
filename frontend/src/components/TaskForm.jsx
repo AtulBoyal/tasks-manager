@@ -8,6 +8,7 @@ function TaskForm({
   taskTags, setTaskTags,
   taskLinks, setTaskLinks,
   editingTaskId, setEditingTaskId,
+  subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput, handleToggleSubtask,
   handleSubmit
 }) {
   
@@ -72,6 +73,54 @@ function TaskForm({
                   #{tag}
                   <button type="button" onClick={() => setTaskTags(taskTags.filter(t => t !== tag))} className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 ml-1 text-sm leading-none">✕</button>
                 </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ✨ NEW SUBTASKS SECTION */}
+        <div className="w-full flex flex-col gap-[10px] mt-[5px]">
+          <div className="flex flex-col sm:flex-row items-center gap-[9px] justify-between sm:justify-center px-1 mb-1">
+            <label className="font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto text-sm sm:text-base">Sub-tasks (Steps):</label>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <input 
+                type="text" 
+                placeholder="e.g. Write test cases..." 
+                className={`${inputStyles} w-full sm:min-w-[200px] flex-1`} 
+                value={currentSubtaskInput}
+                onChange={e => setCurrentSubtaskInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentSubtaskInput.trim()) {
+                      setSubtasks([...subtasks, { id: Date.now(), title: currentSubtaskInput.trim(), completed: false }]);
+                      setCurrentSubtaskInput('');
+                    }
+                  }
+                }}
+              />
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (currentSubtaskInput.trim()) {
+                    setSubtasks([...subtasks, { id: Date.now(), title: currentSubtaskInput.trim(), completed: false }]);
+                    setCurrentSubtaskInput('');
+                  }
+                }}
+                className="text-[0.85em] bg-[#ffe6ba] dark:bg-slate-700 text-[#b06d0e] dark:text-orange-400 px-[12px] py-2 sm:py-0 rounded-[6px] font-bold transition-colors hover:bg-[#ffd59e] dark:hover:bg-slate-600"
+              >
+                Add Step
+              </button>
+            </div>
+          </div>
+          
+          {subtasks.length > 0 && (
+            <div className="flex flex-col gap-2 w-full bg-white/30 dark:bg-slate-900/30 p-3 rounded-lg">
+              {subtasks.map((st) => (
+                <div key={st.id} className="flex justify-between items-center bg-[#fffbf1] dark:bg-slate-800 p-2 rounded border border-orange-100 dark:border-slate-700">
+                  <span className="text-sm dark:text-slate-200 text-left flex-1">• {st.title}</span>
+                  <button type="button" onClick={() => setSubtasks(subtasks.filter(s => s.id !== st.id))} className="text-red-500 hover:text-red-700 font-bold px-2">✕</button>
+                </div>
               ))}
             </div>
           )}

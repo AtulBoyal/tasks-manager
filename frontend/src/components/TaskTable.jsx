@@ -4,14 +4,15 @@ function TaskTable({
   tasks,
   isCompleted,
   todayDate,
-  targetDate, // ✨ NEW PROP
+  targetDate, 
   formatDate,
   getFactorClass,
   handleInlineUpdate,
   handleEdit,
   handleDelete,
   handleComplete,
-  handleUndoComplete
+  handleUndoComplete,
+  handleToggleSubtask
 }) {
   const thStyles = "py-[10px] px-[9px] bg-[#ffe6ba] dark:bg-slate-800 text-[#b06d0e] dark:text-orange-400 text-[15.5px] font-[750] border-b-[2px] border-b-[#ffd59e] dark:border-b-slate-700 last:pr-0";
   const tdStyles = "block md:table-cell py-1.5 md:py-[10px] px-0 md:px-[8px] border-b border-orange-50/50 dark:border-slate-700/50 md:border-b-[1.2px] last:border-0 md:group-last:border-b-0 text-black dark:text-slate-200 text-left md:text-center";
@@ -38,7 +39,6 @@ function TaskTable({
         )}
         {tasks.map((task, idx) => {
           
-          // ✨ NEW: Highlight Logic!
           const isTarget = !isCompleted && task.last_date === targetDate;
           const highlightClasses = isTarget
             ? "ring-2 ring-orange-400 dark:ring-orange-500 bg-orange-50/80 dark:bg-slate-700/80 shadow-md md:shadow-none transform md:scale-[1.01]"
@@ -49,7 +49,7 @@ function TaskTable({
             
             <td className={`${tdStyles} hidden md:table-cell`}>{idx+1}.</td>
             
-            {/* TASK NAME & TAGS */}
+            {/* TASK NAME, TAGS & SUBTASKS */}
             <td className={`${tdStyles} flex flex-col items-start md:items-center ${isCompleted ? 'text-[#888] dark:text-slate-500' : ''}`}>
               <div className="flex flex-wrap items-center gap-2 mb-1 md:mb-0">
                 <span className={isTarget ? 'text-black dark:text-white font-extrabold text-base' : `text-black dark:text-slate-200 text-base ${isCompleted ? '' : 'font-semibold md:font-normal'}`}>
@@ -70,6 +70,7 @@ function TaskTable({
                   </div>
                 )}
               </div>
+              
               {task.tags && task.tags.length > 0 && (
                 <div className={`flex flex-wrap gap-1 mt-0.5 justify-start md:justify-center ${isCompleted ? 'opacity-70' : ''}`}>
                   {task.tags.map(tag => (
@@ -77,6 +78,27 @@ function TaskTable({
                   ))}
                 </div>
               )}
+
+              {/* ✨ 2. SUBTASK RENDERER GOES RIGHT HERE */}
+              {task.subtasks && task.subtasks.length > 0 && (
+                <div className="mt-3 w-full flex flex-col gap-1.5 pl-1 border-l-2 border-orange-200 dark:border-slate-600">
+                  {task.subtasks.map(st => (
+                    <label key={st.id} className={`flex items-start gap-2 cursor-pointer group/st ${isCompleted ? 'opacity-60' : ''}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={st.completed}
+                        disabled={isCompleted}
+                        onChange={() => handleToggleSubtask(task.id, st.id)}
+                        className="mt-0.5 cursor-pointer accent-orange-500 dark:accent-orange-600 w-3.5 h-3.5"
+                      />
+                      <span className={`text-xs text-left transition-colors ${st.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300 group-hover/st:text-black dark:group-hover/st:text-white'}`}>
+                        {st.title}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
             </td>
 
             {/* PRIORITY */}
