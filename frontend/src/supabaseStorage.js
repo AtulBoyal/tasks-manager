@@ -2,7 +2,7 @@
 import { supabase } from './supabaseClient';
 
 // We hardcode the app password here to match your UI's security gate
-const APP_PASSWORD = "JaiSiyaRam@12345"; 
+const APP_PASSWORD = "8520";
 
 export const apiStorage = {
   getTasks: async (password) => {
