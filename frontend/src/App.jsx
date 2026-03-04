@@ -1,7 +1,7 @@
 // App.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Analytics } from "@vercel/analytics/react";
-import { apiStorage } from './supabaseStorage';
+import { apiStorage } from './githubStorage';
 import LoginScreen from './components/LoginScreen';
 import Header from './components/Header';
 import TaskForm from './components/TaskForm';
