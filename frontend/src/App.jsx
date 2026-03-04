@@ -10,7 +10,7 @@ import FilterBar from './components/FilterBar';
 import ConsistencyHeatmap from './components/ConsistencyHeatmap';
 import QuickAddModal from './components/QuickAddModal';
 import { supabase } from './supabaseClient';
-import { generateAutoTags } from '../utils/tagEngine';
+import { generateAutoTags } from './utils/tagEngine';
 
 // ============================================================================
 // WEBAUTHN UTILITY FUNCTIONS (THE BUFFER CONVERSIONS)
