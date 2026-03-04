@@ -500,10 +500,33 @@ function App() {
 
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { ...t, name: taskName, factor, last_date: lastDate, start_date: startDate, links: taskLinks, tags: taskTags, subtasks: subtasks, recurrence: recurrence } : t
+        t.id === editingTaskId ? { 
+          ...t, 
+          name: taskName, 
+          factor, 
+          // ✨ CONVERT EMPTY STRINGS TO NULL
+          last_date: lastDate || null, 
+          start_date: startDate || null, 
+          links: taskLinks, 
+          tags: taskTags, 
+          subtasks: subtasks, 
+          recurrence: recurrence 
+        } : t
       );
     } else {
-      updatedTasks = [...tasks, { id: Date.now(), name: taskName, factor, last_date: lastDate, start_date: startDate, completed: false, links: taskLinks, tags: smartTags, subtasks: subtasks, recurrence: recurrence }];
+      updatedTasks = [...tasks, { 
+        id: Date.now(), 
+        name: taskName, 
+        factor, 
+        // ✨ CONVERT EMPTY STRINGS TO NULL
+        last_date: lastDate || null, 
+        start_date: startDate || null, 
+        completed: false, 
+        links: taskLinks, 
+        tags: smartTags, 
+        subtasks: subtasks, 
+        recurrence: recurrence 
+      }];
     }
     updateLocalTasks(updatedTasks);
     
