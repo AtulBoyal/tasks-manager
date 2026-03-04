@@ -552,26 +552,38 @@ function App() {
     return matchesFactor && matchesDate && (matchesName || matchesLinks || matchesTags);
   };
 
+  // ✨ FILTER AND SORT ACTIVE TASKS
   const currentDateStr = new Date().toISOString().split('T')[0];
 
-  // ✨ HIDE TASKS IF THEIR START DATE IS IN THE FUTURE
   const filteredActiveTasks = tasks.filter(task => {
     if (task.completed) return false;
-    
-    // If a start_date exists and it is strictly greater than today, hide it!
     if (task.start_date && task.start_date > currentDateStr) return false;
-
-    // Normal filtering logic...
     if (filterStatus === 'Active' && filterDate && task.last_date !== filterDate) return false;
     if (filterStatus !== 'Active' && filterStatus !== 'All' && task.factor !== filterStatus) return false;
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
+  }).sort((a, b) => {
+    // 1. Tasks with "No Deadline" get pushed to the very bottom
+    if (!a.last_date && b.last_date) return 1;
+    if (a.last_date && !b.last_date) return -1;
+    if (!a.last_date && !b.last_date) return 0;
+    
+    // 2. Sort the rest by closest deadline first (Ascending)
+    return new Date(a.last_date) - new Date(b.last_date);
   });
 
-  const filteredCompletedTasks = [...tasks].filter(task => task.completed).filter(matchesSearchAndFilter).sort((a, b) => {
-    const dA = new Date(a.last_date), dB = new Date(b.last_date);
-    if(dA < dB) return 1; if(dA > dB) return -1;
-    return difficultyOrder[a.factor] - difficultyOrder[b.factor];
+  // ✨ FILTER AND SORT COMPLETED TASKS
+  const completedTasks = tasks.filter(task => {
+    if (!task.completed) return false;
+    if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  }).sort((a, b) => {
+    // Sort by most recently completed first (Descending)
+    if (!a.completion_date && b.completion_date) return 1;
+    if (a.completion_date && !b.completion_date) return -1;
+    if (!a.completion_date && !b.completion_date) return 0;
+    
+    return new Date(b.completion_date) - new Date(a.completion_date);
   });
 
   return (
