@@ -305,6 +305,82 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks]);
 
+  // ============================================================================
+  // AUTOMATED CONTEST TRACKER (CODEFORCES)
+  // Fetches upcoming rounds once a day and auto-injects them as Urgent tasks
+  // ============================================================================
+  useEffect(() => {
+    // Only run if the user is logged in and tasks have loaded from the database
+    if (!passwordOk || tasks.length === 0) return;
+
+    const fetchContests = async () => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const lastFetch = localStorage.getItem('last_cf_fetch');
+
+      // Throttle: Only ping the Codeforces API once per day
+      if (lastFetch !== todayStr) {
+        try {
+          const response = await fetch('https://codeforces.com/api/contest.list?gym=false');
+          const data = await response.json();
+
+          if (data.status === 'OK') {
+            // Filter for upcoming contests (usually the first few in the array)
+            const upcoming = data.result.filter(c => c.phase === 'BEFORE');
+            
+            let newTasksAdded = false;
+            let currentTasks = [...tasks];
+
+            upcoming.forEach((contest, index) => {
+              // Create a standardized name so we can check for duplicates
+              const contestName = `🏆 CF: ${contest.name}`;
+              const alreadyExists = currentTasks.some(t => t.name === contestName);
+
+              if (!alreadyExists) {
+                // CF returns Unix timestamp in seconds. Convert to milliseconds.
+                const contestDateObj = new Date(contest.startTimeSeconds * 1000);
+                const contestDateStr = contestDateObj.toISOString().split('T')[0];
+                
+                // Format the exact time (e.g., 8:05 PM) for the subtask
+                const timeString = contestDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                const newTask = {
+                  id: Date.now() + index, // Ensure unique IDs in a fast loop
+                  name: contestName,
+                  factor: 'Urgent', 
+                  last_date: contestDateStr,
+                  completed: false,
+                  is_daily: false,
+                  links: [{ title: 'Registration / Contest Page', url: 'https://codeforces.com/contests' }],
+                  tags: ['codeforces', 'contest'],
+                  subtasks: [
+                    { id: Date.now() + 100 + index, title: `Register before ${timeString}`, completed: false },
+                    { id: Date.now() + 200 + index, title: `Compete at ${timeString}`, completed: false }
+                  ]
+                };
+                
+                currentTasks.push(newTask);
+                newTasksAdded = true;
+              }
+            });
+
+            // If we found new contests, push them to Supabase!
+            if (newTasksAdded) {
+              updateLocalTasks(currentTasks);
+            }
+            
+            // Mark today as successfully fetched
+            localStorage.setItem('last_cf_fetch', todayStr);
+          }
+        } catch (error) {
+          console.error("Failed to fetch Codeforces contests", error);
+        }
+      }
+    };
+
+    fetchContests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passwordOk, tasks.length]);
+
   const handleToggleSubtask = (taskId, subtaskId) => {
     const updatedTasks = tasks.map(t => {
       if (t.id === taskId && t.subtasks) {
