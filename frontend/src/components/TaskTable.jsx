@@ -45,7 +45,12 @@ function TaskTable({
             : "border border-orange-100 dark:border-slate-700 md:border-none bg-white dark:bg-slate-800 md:bg-transparent shadow-sm md:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700";
 
           return (
-          <tr key={task.id} className={`block md:table-row rounded-[10px] md:rounded-none mb-2.5 md:mb-0 p-3 md:p-0 transition-all duration-200 group ${highlightClasses} ${isCompleted ? 'opacity-80 md:opacity-100' : ''}`}>
+          <tr 
+            key={task.id} 
+            style={{ animationDelay: `${idx * 60}ms` }}
+            className={`animate-task-enter block md:table-row rounded-[10px] md:rounded-none mb-2.5 md:mb-0 p-3 md:p-0 group ${highlightClasses} ${isCompleted ? 'opacity-80 md:opacity-100' : ''} 
+            transform transition-all duration-300 ease-out hover:-translate-y-[2px] hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_8px_30px_rgba(245,124,0,0.08)] border border-transparent hover:border-orange-200 dark:hover:border-slate-600/80 z-10 hover:z-20 relative bg-white md:bg-transparent dark:bg-slate-800 md:dark:bg-transparent`}
+          >
             
             <td className={`${tdStyles} hidden md:table-cell`}>{idx+1}.</td>
             
@@ -84,13 +89,27 @@ function TaskTable({
                 <div className="mt-3 w-full flex flex-col gap-1.5 pl-1 border-l-2 border-orange-200 dark:border-slate-600">
                   {task.subtasks.map(st => (
                     <label key={st.id} className={`flex items-start gap-2 cursor-pointer group/st ${isCompleted ? 'opacity-60' : ''}`}>
-                      <input 
-                        type="checkbox" 
-                        checked={st.completed}
-                        disabled={isCompleted}
-                        onChange={() => handleToggleSubtask(task.id, st.id)}
-                        className="mt-0.5 cursor-pointer accent-orange-500 dark:accent-orange-600 w-3.5 h-3.5"
-                      />
+                      {tasks.map((task) => (
+                        <div key={task.id} className="...">
+                          
+                          {/* ✨ NEW PREMIUM CHECKBOX ✨ */}
+                          <label className="relative flex items-center justify-center cursor-pointer group">
+                            <input 
+                              type="checkbox" 
+                              checked={task.completed} 
+                              onChange={() => handleComplete(task.id)}
+                              className="peer sr-only" 
+                            />
+                            <div className="w-6 h-6 rounded-full border-[2px] border-slate-300 dark:border-slate-500 peer-checked:border-[#f57c00] peer-checked:bg-[#f57c00] transition-all duration-300 ease-out flex items-center justify-center group-active:scale-75 shadow-inner">
+                              <svg className="w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 delay-75 scale-50 peer-checked:scale-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          </label>
+                          
+                          {/* ... rest of your task name and details ... */}
+                        </div>
+                      ))}
                       <span className={`text-xs text-left transition-colors ${st.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300 group-hover/st:text-black dark:group-hover/st:text-white'}`}>
                         {st.title}
                       </span>
