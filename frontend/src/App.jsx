@@ -9,6 +9,7 @@ import TaskTable from './components/TaskTable';
 import FilterBar from './components/FilterBar';
 import ConsistencyHeatmap from './components/ConsistencyHeatmap';
 import QuickAddModal from './components/QuickAddModal';
+import { supabase } from './supabaseClient';
 
 // ============================================================================
 // WEBAUTHN UTILITY FUNCTIONS (THE BUFFER CONVERSIONS)
@@ -231,6 +232,45 @@ function App() {
     }
   }, []);
 
+  // ============================================================================
+  // REAL-TIME WEBSOCKET SUBSCRIPTION
+  // Listens for changes from other devices and updates the UI instantly
+  // ============================================================================
+  useEffect(() => {
+    if (!passwordOk) return; // Only listen if the user is fully logged in
+
+    const taskListener = supabase
+      .channel('public:tasks')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        (payload) => {
+          // A change happened in the database! Let's surgically update the React state.
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            setTasks((prevTasks) => {
+              const taskExists = prevTasks.some(t => t.id === payload.new.id);
+              if (taskExists) {
+                // Replace the old version with the new one from the phone
+                return prevTasks.map(t => t.id === payload.new.id ? payload.new : t);
+              } else {
+                // Add the brand new task from the phone
+                return [...prevTasks, payload.new];
+              }
+            });
+          } else if (payload.eventType === 'DELETE') {
+            // Remove the task that was deleted on the phone
+            setTasks((prevTasks) => prevTasks.filter(t => t.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup the WebSocket when the app closes
+    return () => {
+      supabase.removeChannel(taskListener);
+    };
+  }, [passwordOk]);
+
   const handleToggleSubtask = (taskId, subtaskId) => {
     const updatedTasks = tasks.map(t => {
       if (t.id === taskId && t.subtasks) {
@@ -280,11 +320,24 @@ function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  const updateLocalTasks = (newTasks) => {
+  const updateLocalTasks = async (newTasks) => {
+    // 1. Optimistic UI Update (Instantly updates the screen so it feels fast)
     setTasks(newTasks);
-    setHasUnsavedChanges(true);
     localStorage.setItem('task_manager_cache', JSON.stringify(newTasks));
-    localStorage.setItem('task_manager_unsaved', 'true');
+    
+    // 2. Background Auto-Sync (Fires off to PostgreSQL immediately)
+    setIsSyncing(true);
+    try {
+      await apiStorage.saveTasks(newTasks, enteredPassword);
+      setHasUnsavedChanges(false);
+      localStorage.setItem('task_manager_unsaved', 'false');
+    } catch (error) {
+      console.error("Auto-sync failed. Saved locally. Will retry later.", error);
+      setHasUnsavedChanges(true);
+      localStorage.setItem('task_manager_unsaved', 'true');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleInlineUpdate = (taskId, field, value) => {
