@@ -1,6 +1,6 @@
 // src/utils/tagEngine.js
 
-export const generateAutoTags = (taskName) => {
+export const generateAutoTags = (taskName, existingTags) => {
   const text = taskName.toLowerCase();
   const newTags = new Set(existingTags); 
 
