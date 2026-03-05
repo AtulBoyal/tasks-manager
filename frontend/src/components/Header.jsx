@@ -21,7 +21,7 @@ function Header({ isDarkMode, setIsDarkMode, isSyncing, hasUnsavedChanges, handl
         </div>
 
         {/* ✨ CONDITIONALLY RENDERED SYNC RECOVERY BUTTON */}
-        {!hasUnsavedChanges && (
+        {hasUnsavedChanges && (
           <button 
             onClick={handleSyncRecovery}
             className="ml-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 text-xs font-bold px-3 py-1.5 rounded-full hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors flex items-center gap-1 shadow-sm"
