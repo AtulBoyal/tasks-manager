@@ -597,34 +597,42 @@ function App() {
   });
 
   // ============================================================================
-  // SYNC RECOVERY ENGINE (THE ESCAPE HATCH)
+  // SYNC RECOVERY ENGINE (BULLETPROOF VERSION)
   // ============================================================================
-  const handleSyncRecovery = async () => {
+  const handleSyncRecovery = () => {
+    // 1. Peek into the "danger zone"
+    const localData = localStorage.getItem('tasks');
+    let unsavedList = "";
+    
+    if (localData) {
+      try {
+        const tasks = JSON.parse(localData);
+        unsavedList = tasks.slice(0, 5).map(t => `• ${t.name}`).join('\n');
+        if (tasks.length > 5) unsavedList += `\n...and ${tasks.length - 5} more`;
+      } catch (e) {
+        unsavedList = "(Data is corrupt and unreadable)";
+      }
+    }
+
+    // 2. The Warning
     const confirmReset = window.confirm(
-      "Sync Error Detected: Do you want to wipe unsaved local changes and restore your tasks directly from the server?"
+      `⚠️ SYNC ERROR RECOVERY ⚠️\n\n` +
+      `We detected corrupted data that is blocking your connection.\n` +
+      `To fix this, we need to clear your unsaved local changes and re-download the clean database.\n\n` +
+      `YOU WILL LOSE THE FOLLOWING UNSAVED TASKS:\n${unsavedList}\n\n` +
+      `Do you want to proceed? (Take a screenshot first if you need to save these!)`
     );
     
     if (!confirmReset) return;
 
-    try {
-      // 1. Nuke the poisoned local storage queue
-      localStorage.removeItem('tasks'); // Change 'tasks' if your local storage key is different
-      
-      // 2. Visually indicate we are fixing it
-      alert("Flushing local cache and fetching pristine server data...");
-
-      // 3. Force a fresh pull from Supabase (assuming you have a fetchTasks function)
-      // If your fetch function is named differently (like loadTasks), use that here!
-      if (typeof fetchTasks === 'function') {
-        await fetchTasks();
-      } else {
-        window.location.reload(); // Fallback: just reload the page to trigger the initial useEffect fetch
-      }
-
-    } catch (error) {
-      console.error("Recovery failed:", error);
-      alert("Recovery failed. Please check your internet connection.");
-    }
+    // 3. The Bulletproof Reset
+    // We remove the try/catch and the background fetching entirely.
+    // We wipe the slate clean, and force the browser to do a hard refresh.
+    localStorage.removeItem('tasks'); 
+    alert("Local cache cleared! The app will now reload to fetch your live data.");
+    
+    // This instantly kills all "zombie" React states and forces a clean Supabase connection
+    window.location.reload(); 
   };
 
   return (
