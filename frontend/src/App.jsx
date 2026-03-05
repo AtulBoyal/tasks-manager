@@ -596,6 +596,37 @@ function App() {
     return new Date(b.completion_date) - new Date(a.completion_date);
   });
 
+  // ============================================================================
+  // SYNC RECOVERY ENGINE (THE ESCAPE HATCH)
+  // ============================================================================
+  const handleSyncRecovery = async () => {
+    const confirmReset = window.confirm(
+      "Sync Error Detected: Do you want to wipe unsaved local changes and restore your tasks directly from the server?"
+    );
+    
+    if (!confirmReset) return;
+
+    try {
+      // 1. Nuke the poisoned local storage queue
+      localStorage.removeItem('tasks'); // Change 'tasks' if your local storage key is different
+      
+      // 2. Visually indicate we are fixing it
+      alert("Flushing local cache and fetching pristine server data...");
+
+      // 3. Force a fresh pull from Supabase (assuming you have a fetchTasks function)
+      // If your fetch function is named differently (like loadTasks), use that here!
+      if (typeof fetchTasks === 'function') {
+        await fetchTasks();
+      } else {
+        window.location.reload(); // Fallback: just reload the page to trigger the initial useEffect fetch
+      }
+
+    } catch (error) {
+      console.error("Recovery failed:", error);
+      alert("Recovery failed. Please check your internet connection.");
+    }
+  };
+
   return (
     <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300 pb-[40px]">
       
@@ -618,6 +649,7 @@ function App() {
               isDarkMode={isDarkMode}
               setIsDarkMode={setIsDarkMode}
               isSyncing={isSyncing}
+              handleSyncRecovery={handleSyncRecovery}
             />
 
             <ConsistencyHeatmap tasks={tasks} />
