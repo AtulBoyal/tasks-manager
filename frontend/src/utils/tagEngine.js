@@ -2,9 +2,9 @@
 
 export const generateAutoTags = (taskName) => {
   const text = taskName.toLowerCase();
-  const newTags = new Set(); 
+  const newTags = new Set(existingTags); 
 
-  const rules = [
+  const dictionary = [
     { keywords: ['react', 'frontend', 'css', 'tailwind', 'ui'], tag: 'frontend' },
     { keywords: ['spring', 'java', 'maven', 'api'], tag: 'java' },
     { keywords: ['xv6', 'os', 'system call', 'risc-v', 'arm', 'memory'], tag: 'os' },
@@ -16,11 +16,12 @@ export const generateAutoTags = (taskName) => {
     { keywords: ['gym', 'workout', 'strength', 'muscle', 'training'], tag: 'fitness' }
   ];
 
-  rules.forEach(rule => {
-    if (rule.keywords.some(kw => text.includes(kw))) {
-      newTags.add(rule.tag);
+  for (const [keyword, tag] of Object.entries(dictionary)) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    if (regex.test(text)) {
+      newTags.add(tag);
     }
-  });
+  }
 
   return Array.from(newTags);
-};
+}
