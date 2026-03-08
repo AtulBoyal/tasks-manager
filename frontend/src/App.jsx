@@ -1,4 +1,3 @@
-// App.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Analytics } from "@vercel/analytics/react";
 import { apiStorage } from './supabaseStorage';
@@ -49,7 +48,22 @@ function App() {
   const [taskName, setTaskName] = useState('');
   const [factor, setFactor] = useState('Normal'); 
   const [lastDate, setLastDate] = useState('');
-  const [tasks, setTasks] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  
+  // ✨ PHASE 1: INSTANT CACHE LOADING
+  // Using the correct key: 'task_manager_cache'
+  const [tasks, setTasks] = useState(() => {
+    try {
+      const cachedTasks = localStorage.getItem('task_manager_cache');
+      if (cachedTasks) {
+        return JSON.parse(cachedTasks);
+      }
+    } catch (error) {
+      console.error("Cache read error, starting fresh.", error);
+    }
+    return []; // Fallback to empty if cache is empty or corrupted
+  });
+  
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskLinks, setTaskLinks] = useState([]);
   const [taskTags, setTaskTags] = useState([]);
@@ -69,7 +83,6 @@ function App() {
   const [filterDate, setFilterDate] = useState(''); 
   const [filterStatus, setFilterStatus] = useState('Active'); 
   const [showCompleted, setShowCompleted] = useState(false);  
-  const [startDate, setStartDate] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [hasBiometricSetup, setHasBiometricSetup] = useState(false);
@@ -78,11 +91,10 @@ function App() {
   // --- QUICK ADD STATE & LISTENERS ---
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // Global Ctrl+K / Cmd+K listener
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault(); // Prevents browser search bar from focusing
+        e.preventDefault(); 
         if (passwordOk) {
           setIsQuickAddOpen(true);
         }
@@ -92,20 +104,20 @@ function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [passwordOk]);
 
-  // The function that saves the quick task
-  const handleQuickAdd = (newTitle) => {
-    // ✨ Run the Quick Add text through the NLP engine
-    const smartTags = generateAutoTags(newTitle, []);
+  const todayDate = new Date().toISOString().split('T')[0];
 
+  const handleQuickAdd = (newTitle) => {
+    const smartTags = generateAutoTags(newTitle, []);
     const newTask = {
       id: Date.now(),
       name: newTitle,
       factor: 'Normal',
       last_date: todayDate,
+      start_date: null,
       completed: false,
       recurrence: 'none',
       links: [],
-      tags: smartTags, // Automatically applies the generated tags
+      tags: smartTags, 
       subtasks: []
     };
     updateLocalTasks([...tasks, newTask]);
@@ -128,6 +140,66 @@ function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  // ✨ PHASE 2: NETWORK STATUS TRACKING
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // ============================================================================
+  // ✨ THE BACKGROUND AUTO-FLUSHER
+  // Watches for the internet to return. If we have unsaved changes, it silently 
+  // pushes the local cache to the server.
+  // ============================================================================
+  useEffect(() => {
+    // We only want to trigger this if:
+    // 1. We just came back online
+    // 2. We actually have pending changes
+    // 3. The user is fully logged in
+    if (isOnline && hasUnsavedChanges && passwordOk) {
+      
+      const flushOfflineQueue = async () => {
+        setIsSyncing(true);
+        console.log("🚀 Internet restored! Flushing offline tasks to server...");
+        
+        try {
+          // Read the absolute latest truth from the local cache
+          const cachedData = localStorage.getItem('task_manager_cache');
+          if (cachedData) {
+            const parsedTasks = JSON.parse(cachedData);
+            
+            // Push to Supabase
+            await apiStorage.saveTasks(parsedTasks, enteredPassword);
+            
+            // Success! Clear the danger flags.
+            setHasUnsavedChanges(false);
+            localStorage.setItem('task_manager_unsaved', 'false');
+            console.log("✅ Background sync complete.");
+          }
+        } catch (error) {
+          console.error("⚠️ Background sync failed. Will retry later.", error);
+          // We intentionally leave hasUnsavedChanges as true so it tries again next time!
+        } finally {
+          setIsSyncing(false);
+        }
+      };
+
+      flushOfflineQueue();
+    }
+  // We strictly ONLY want this to fire when `isOnline` changes back to true.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline]);
 
   const setupBiometrics = async (passwordToSave) => {
     if (!window.PublicKeyCredential) {
@@ -241,10 +313,9 @@ function App() {
 
   // ============================================================================
   // REAL-TIME WEBSOCKET SUBSCRIPTION
-  // Listens for changes from other devices and updates the UI instantly
   // ============================================================================
   useEffect(() => {
-    if (!passwordOk) return; // Only listen if the user is fully logged in
+    if (!passwordOk) return; 
 
     const taskListener = supabase
       .channel('public:tasks')
@@ -252,27 +323,22 @@ function App() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks' },
         (payload) => {
-          // A change happened in the database! Let's surgically update the React state.
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             setTasks((prevTasks) => {
               const taskExists = prevTasks.some(t => t.id === payload.new.id);
               if (taskExists) {
-                // Replace the old version with the new one from the phone
                 return prevTasks.map(t => t.id === payload.new.id ? payload.new : t);
               } else {
-                // Add the brand new task from the phone
                 return [...prevTasks, payload.new];
               }
             });
           } else if (payload.eventType === 'DELETE') {
-            // Remove the task that was deleted on the phone
             setTasks((prevTasks) => prevTasks.filter(t => t.id !== payload.old.id));
           }
         }
       )
       .subscribe();
 
-    // Cleanup the WebSocket when the app closes
     return () => {
       supabase.removeChannel(taskListener);
     };
@@ -291,15 +357,12 @@ function App() {
       let needsUpdate = false;
       
       const resetTasks = tasks.map(t => {
-        // Only process completed tasks that actually have a recurrence rule
         if (t.completed && t.recurrence && t.recurrence !== 'none') {
           const compDate = t.completion_date ? t.completion_date.split('T')[0] : '';
           
-          // If it was NOT completed today, it's time to reset it for the next cycle
           if (compDate !== todayStr && compDate !== '') {
             needsUpdate = true;
             
-            // Calculate the new dates
             let newDeadline = t.last_date ? new Date(t.last_date) : null;
             let newStartDate = t.start_date ? new Date(t.start_date) : null;
             
@@ -314,7 +377,6 @@ function App() {
               if (newStartDate) newStartDate.setMonth(newStartDate.getMonth() + 1);
             }
 
-            // Uncheck the task and apply the new dates!
             return { 
               ...t, 
               completed: false, 
@@ -338,44 +400,36 @@ function App() {
 
   // ============================================================================
   // AUTOMATED CONTEST TRACKER (CODEFORCES)
-  // Fetches upcoming rounds once a day and auto-injects them as Urgent tasks
   // ============================================================================
   useEffect(() => {
-    // Only run if the user is logged in and tasks have loaded from the database
     if (!passwordOk || tasks.length === 0) return;
 
     const fetchContests = async () => {
       const todayStr = new Date().toISOString().split('T')[0];
       const lastFetch = localStorage.getItem('last_cf_fetch');
 
-      // Throttle: Only ping the Codeforces API once per day
       if (lastFetch !== todayStr) {
         try {
           const response = await fetch('https://codeforces.com/api/contest.list?gym=false');
           const data = await response.json();
 
           if (data.status === 'OK') {
-            // Filter for upcoming contests (usually the first few in the array)
             const upcoming = data.result.filter(c => c.phase === 'BEFORE');
             
             let newTasksAdded = false;
             let currentTasks = [...tasks];
 
             upcoming.forEach((contest, index) => {
-              // Create a standardized name so we can check for duplicates
               const contestName = `🏆 CF: ${contest.name}`;
               const alreadyExists = currentTasks.some(t => t.name === contestName);
 
               if (!alreadyExists) {
-                // CF returns Unix timestamp in seconds. Convert to milliseconds.
                 const contestDateObj = new Date(contest.startTimeSeconds * 1000);
                 const contestDateStr = contestDateObj.toISOString().split('T')[0];
-                
-                // Format the exact time (e.g., 8:05 PM) for the subtask
                 const timeString = contestDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 
                 const newTask = {
-                  id: Date.now() + index, // Ensure unique IDs in a fast loop
+                  id: Date.now() + index, 
                   name: contestName,
                   factor: 'Urgent', 
                   last_date: contestDateStr,
@@ -394,12 +448,10 @@ function App() {
               }
             });
 
-            // If we found new contests, push them to Supabase!
             if (newTasksAdded) {
               updateLocalTasks(currentTasks);
             }
             
-            // Mark today as successfully fetched
             localStorage.setItem('last_cf_fetch', todayStr);
           }
         } catch (error) {
@@ -462,18 +514,27 @@ function App() {
   }, [hasUnsavedChanges]);
 
   const updateLocalTasks = async (newTasks) => {
-    // 1. Optimistic UI Update (Instantly updates the screen so it feels fast)
+    // 1. Instantly update the screen and the local cache
     setTasks(newTasks);
     localStorage.setItem('task_manager_cache', JSON.stringify(newTasks));
     
-    // 2. Background Auto-Sync (Fires off to PostgreSQL immediately)
+    // ✨ PHASE 2: THE OFFLINE SHORT-CIRCUIT
+    // If we have no internet, flag as unsaved and STOP. Do not attempt a network request.
+    if (!navigator.onLine) {
+      console.log("Offline mode: Task safely queued in local cache.");
+      setHasUnsavedChanges(true);
+      localStorage.setItem('task_manager_unsaved', 'true');
+      return; 
+    }
+
+    // 2. We are online! Fire off to PostgreSQL
     setIsSyncing(true);
     try {
       await apiStorage.saveTasks(newTasks, enteredPassword);
       setHasUnsavedChanges(false);
       localStorage.setItem('task_manager_unsaved', 'false');
     } catch (error) {
-      console.error("Auto-sync failed. Saved locally. Will retry later.", error);
+      console.error("Auto-sync failed. Saved locally.", error);
       setHasUnsavedChanges(true);
       localStorage.setItem('task_manager_unsaved', 'true');
     } finally {
@@ -504,7 +565,6 @@ function App() {
           ...t, 
           name: taskName, 
           factor, 
-          // ✨ CONVERT EMPTY STRINGS TO NULL
           last_date: lastDate || null, 
           start_date: startDate || null, 
           links: taskLinks, 
@@ -518,7 +578,6 @@ function App() {
         id: Date.now(), 
         name: taskName, 
         factor, 
-        // ✨ CONVERT EMPTY STRINGS TO NULL
         last_date: lastDate || null, 
         start_date: startDate || null, 
         completed: false, 
@@ -530,7 +589,6 @@ function App() {
     }
     updateLocalTasks(updatedTasks);
     
-    // Reset everything
     setTaskName(''); setFactor('Normal'); setLastDate(''); setStartDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setRecurrence('none'); setEditingTaskId(null);
   };
 
@@ -541,7 +599,7 @@ function App() {
   const handleEdit = (task) => {
     setTaskName(task.name); setFactor(task.factor); 
     setLastDate(task.last_date || ''); 
-    setStartDate(task.start_date || ''); // ✨ Load start date
+    setStartDate(task.start_date || '');
     setTaskLinks(task.links || []); setTaskTags(task.tags || []); setSubtasks(task.subtasks || []); 
     setRecurrence(task.recurrence || 'none');
     setEditingTaskId(task.id);
@@ -560,8 +618,6 @@ function App() {
     return '';
   };
 
-  const todayDate = new Date().toISOString().split('T')[0];
-
   // ✨ FILTER AND SORT ACTIVE TASKS
   const currentDateStr = new Date().toISOString().split('T')[0];
 
@@ -573,12 +629,9 @@ function App() {
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   }).sort((a, b) => {
-    // 1. Tasks with "No Deadline" get pushed to the very bottom
     if (!a.last_date && b.last_date) return 1;
     if (a.last_date && !b.last_date) return -1;
     if (!a.last_date && !b.last_date) return 0;
-    
-    // 2. Sort the rest by closest deadline first (Ascending)
     return new Date(a.last_date) - new Date(b.last_date);
   });
 
@@ -588,11 +641,9 @@ function App() {
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   }).sort((a, b) => {
-    // Sort by most recently completed first (Descending)
     if (!a.completion_date && b.completion_date) return 1;
     if (a.completion_date && !b.completion_date) return -1;
     if (!a.completion_date && !b.completion_date) return 0;
-    
     return new Date(b.completion_date) - new Date(a.completion_date);
   });
 
@@ -600,21 +651,20 @@ function App() {
   // SYNC RECOVERY ENGINE (BULLETPROOF VERSION)
   // ============================================================================
   const handleSyncRecovery = () => {
-    // 1. Peek into the "danger zone"
-    const localData = localStorage.getItem('tasks');
+    // ✨ FIX: Use the correct key to peek into the cache
+    const localData = localStorage.getItem('task_manager_cache');
     let unsavedList = "";
     
     if (localData) {
       try {
-        const tasks = JSON.parse(localData);
-        unsavedList = tasks.slice(0, 5).map(t => `• ${t.name}`).join('\n');
-        if (tasks.length > 5) unsavedList += `\n...and ${tasks.length - 5} more`;
+        const parsedTasks = JSON.parse(localData);
+        unsavedList = parsedTasks.slice(0, 5).map(t => `• ${t.name}`).join('\n');
+        if (parsedTasks.length > 5) unsavedList += `\n...and ${parsedTasks.length - 5} more`;
       } catch (e) {
         unsavedList = "(Data is corrupt and unreadable)";
       }
     }
 
-    // 2. The Warning
     const confirmReset = window.confirm(
       `⚠️ SYNC ERROR RECOVERY ⚠️\n\n` +
       `We detected corrupted data that is blocking your connection.\n` +
@@ -625,13 +675,11 @@ function App() {
     
     if (!confirmReset) return;
 
-    // 3. The Bulletproof Reset
-    // We remove the try/catch and the background fetching entirely.
-    // We wipe the slate clean, and force the browser to do a hard refresh.
-    localStorage.removeItem('tasks'); 
+    // ✨ FIX: Ensure we are removing the right keys!
+    localStorage.removeItem('task_manager_cache'); 
+    localStorage.removeItem('task_manager_unsaved'); 
     alert("Local cache cleared! The app will now reload to fetch your live data.");
     
-    // This instantly kills all "zombie" React states and forces a clean Supabase connection
     window.location.reload(); 
   };
 
@@ -659,6 +707,12 @@ function App() {
               isSyncing={isSyncing}
               handleSyncRecovery={handleSyncRecovery}
             />
+
+            {!isOnline && hasUnsavedChanges && (
+              <div className="w-[96vw] max-w-[900px] mx-auto bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-400 px-4 py-2.5 rounded-[12px] mb-4 text-sm font-semibold flex items-center justify-center shadow-sm text-center">
+                <span>✈️ You are offline. Tasks are safely saved on this device. Open the app when you have internet to sync!</span>
+              </div>
+            )}
 
             <ConsistencyHeatmap tasks={tasks} />
 
@@ -690,8 +744,6 @@ function App() {
               setStartDate={setStartDate}
             />
 
-            {/* --- FILTER BAR & ACTIVE TASKS --- */}
-            {/* The top card ALWAYS holds the filter bar, acting as your main control center */}
             <div className="w-[96vw] max-w-[900px] mx-auto rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[12px] sm:px-[18px] pb-[22px] transition-colors duration-300">
               <FilterBar 
                 searchQuery={searchQuery} setSearchQuery={setSearchQuery}
@@ -700,10 +752,8 @@ function App() {
                 filterDate={filterDate} setFilterDate={setFilterDate}
               />
               
-              {/* Only render the Active table if we are in 'Active' or 'All' view */}
               {(filterStatus === 'Active' || filterStatus === 'All') && (
                 <>
-                  {/* ✨ DAILY HABITS SECTION */}
                   {filteredActiveTasks.some(t => t.recurrence && t.recurrence !== 'none') && (
                     <div className="mb-8">
                       <h2 className="text-center font-extrabold text-[1.5rem] text-[#cc6000] dark:text-orange-500 mb-2 flex items-center justify-center gap-2">
@@ -725,7 +775,6 @@ function App() {
                     </div>
                   )}
 
-                  {/* STANDARD ACTIVE TASKS */}
                   <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px] mt-4">
                     Active Tasks
                   </h2>
@@ -746,15 +795,9 @@ function App() {
               )}
             </div>
             
-            {/* --- COMPLETED TASKS SECTION --- */}
-            {/* ALWAYS renders at the bottom as long as there is at least one completed task in your account */}
             {tasks.some(task => task.completed) && (
               <div className="w-[96vw] max-w-[900px] mx-auto mt-[34px] rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[12px] sm:px-[18px] pb-[22px] mb-[40px] transition-colors duration-300">
                 
-                {/* Dynamic Header:
-                  If view is 'Active', it's a clickable dropdown toggle.
-                  If view is 'All' or 'Completed', it locks open and hides the arrow.
-                */}
                 <div 
                   className={`flex justify-center items-center gap-2 mb-[13px] ${filterStatus === 'Active' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
                   onClick={() => {
@@ -774,7 +817,6 @@ function App() {
                   )}
                 </div>
 
-                {/* Forces table to render fully if view is 'All' or 'Completed', or if the dropdown is clicked */}
                 {((filterStatus === 'All' || filterStatus === 'Completed') || (filterStatus === 'Active' && showCompleted)) && (
                   <TaskTable 
                     tasks={filteredCompletedTasks}
@@ -791,7 +833,6 @@ function App() {
         </div>
       )}
 
-      {/* ✨ NEW: FLOATING ACTION BUTTON (Mobile Friendly) */}
       {passwordOk && (
         <button
           onClick={() => setIsQuickAddOpen(true)}
@@ -802,7 +843,6 @@ function App() {
         </button>
       )}
 
-      {/* ✨ NEW: THE MODAL */}
       <QuickAddModal 
         isOpen={isQuickAddOpen} 
         onClose={() => setIsQuickAddOpen(false)} 
