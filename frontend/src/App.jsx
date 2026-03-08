@@ -629,14 +629,14 @@ function App() {
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   }).sort((a, b) => {
-    // TIER 1: Start Date (Earliest first. Tasks with no start date get pushed down)
-    const hasStartA = !!a.start_date;
-    const hasStartB = !!b.start_date;
-    if (hasStartA !== hasStartB) return hasStartA ? -1 : 1;
-    if (hasStartA && hasStartB) {
-      const startDiff = new Date(a.start_date) - new Date(b.start_date);
-      if (startDiff !== 0) return startDiff;
-    }
+    // // TIER 1: Start Date (Earliest first. Tasks with no start date get pushed down)
+    // const hasStartA = !!a.start_date;
+    // const hasStartB = !!b.start_date;
+    // if (hasStartA !== hasStartB) return hasStartA ? -1 : 1;
+    // if (hasStartA && hasStartB) {
+    //   const startDiff = new Date(a.start_date) - new Date(b.start_date);
+    //   if (startDiff !== 0) return startDiff;
+    // }
 
     // TIER 2: Deadline Date (Earliest first. Tasks with no deadline get pushed down)
     const hasDeadA = !!a.last_date;
