@@ -1,13 +1,13 @@
-const CACHE_NAME = 'task-manager-v2';
+const CACHE_NAME = 'task-manager-v3'; // ✨ Bumped version
 
-// The critical files React needs to boot up the empty shell
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/favicon.ico',
+  '/logo192.png'
 ];
 
-// 1. INSTALL: Force download the critical shell files immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -16,7 +16,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 2. ACTIVATE: Clean up old, broken caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -30,22 +29,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. FETCH: The smart offline router
 self.addEventListener('fetch', (event) => {
-  // Ignore Supabase database calls! We want localStorage to handle that.
   if (event.request.url.includes('supabase.co')) return;
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
-  // ✨ THE FIX: If the browser is asking for a webpage (Navigation), always give it index.html if offline
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html'))
+      fetch(event.request).catch(async () => {
+        const cachedHtml = await caches.match('/index.html');
+        // ✨ THE FIX: Always return a Response object
+        return cachedHtml || new Response('App is offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+      })
     );
     return;
   }
 
-  // For all other files (JS, CSS, Images): Try network first, then cache.
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
@@ -55,6 +54,10 @@ self.addEventListener('fetch', (event) => {
         });
         return networkResponse;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        // ✨ THE FIX: If it's missing, return a safe 404 to prevent the TypeError crash
+        return cachedResponse || new Response('Not found in cache', { status: 404 });
+      })
   );
 });
