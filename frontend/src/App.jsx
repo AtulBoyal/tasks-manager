@@ -706,6 +706,7 @@ function App() {
               setIsDarkMode={setIsDarkMode}
               isSyncing={isSyncing}
               handleSyncRecovery={handleSyncRecovery}
+              isOnline={isOnline}
             />
 
             {!isOnline && hasUnsavedChanges && (
