@@ -629,10 +629,32 @@ function App() {
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   }).sort((a, b) => {
-    if (!a.last_date && b.last_date) return 1;
-    if (a.last_date && !b.last_date) return -1;
-    if (!a.last_date && !b.last_date) return 0;
-    return new Date(a.last_date) - new Date(b.last_date);
+    // TIER 1: Start Date (Earliest first. Tasks with no start date get pushed down)
+    const hasStartA = !!a.start_date;
+    const hasStartB = !!b.start_date;
+    if (hasStartA !== hasStartB) return hasStartA ? -1 : 1;
+    if (hasStartA && hasStartB) {
+      const startDiff = new Date(a.start_date) - new Date(b.start_date);
+      if (startDiff !== 0) return startDiff;
+    }
+
+    // TIER 2: Deadline Date (Earliest first. Tasks with no deadline get pushed down)
+    const hasDeadA = !!a.last_date;
+    const hasDeadB = !!b.last_date;
+    if (hasDeadA !== hasDeadB) return hasDeadA ? -1 : 1;
+    if (hasDeadA && hasDeadB) {
+      const deadDiff = new Date(a.last_date) - new Date(b.last_date);
+      if (deadDiff !== 0) return deadDiff;
+    }
+
+    // TIER 3: Priority Factor (Urgent -> Normal -> Later)
+    const priorityMap = { 'Urgent': 1, 'Normal': 2, 'Later': 3 };
+    const prioA = priorityMap[a.factor] || 4;
+    const prioB = priorityMap[b.factor] || 4;
+    if (prioA !== prioB) return prioA - prioB;
+
+    // TIER 4: Alphabetical by Name (A to Z)
+    return a.name.localeCompare(b.name);
   });
 
   // ✨ FILTER AND SORT COMPLETED TASKS
