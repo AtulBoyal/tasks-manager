@@ -91,6 +91,19 @@ function App() {
   // --- QUICK ADD STATE & LISTENERS ---
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
+  // 💣 THE SERVICE WORKER ASSASSIN (Temporary Fix)
+  // Forces all devices to delete their cached code and download the fresh Vercel build
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister();
+          console.log("Old Service Worker successfully nuked.");
+        }
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -299,7 +312,17 @@ function App() {
         }
       }
 
-      const { tasks: fetchedTasks } = await apiStorage.getTasks(pwd);
+      // ✨ THE FIX: 5-Second Timeout Race
+      // Forces the network to give up if it hangs, preventing the infinite loading loop
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Network Timeout")), 5000)
+      );
+      
+      const { tasks: fetchedTasks } = await Promise.race([
+        apiStorage.getTasks(pwd),
+        timeoutPromise
+      ]);
+
       const { updated, hasLegacy } = migrateLegacyTasks(fetchedTasks || []);
       
       setTasks(updated);
@@ -311,7 +334,10 @@ function App() {
 
     } catch (error) {
       if (error.message === "Unauthorized") throw error;
+      
+      // If the network times out or fails, gracefully load the offline cache
       if (pwd === localStorage.getItem('offline_auth')) {
+        console.warn("Network hung or failed. Forcing offline cache load.");
         const cached = localStorage.getItem('task_manager_cache');
         if (cached) {
           const { updated } = migrateLegacyTasks(JSON.parse(cached));
