@@ -261,14 +261,27 @@ function App() {
   const migrateLegacyTasks = (taskList) => {
     let hasLegacy = false;
     const updated = taskList.map(task => {
+      // 1. Factor Migration (Your existing logic)
+      let newFactor = task.factor;
       if (['Easy', 'Medium', 'Hard'].includes(task.factor)) {
         hasLegacy = true;
-        let newFactor = 'Later';
+        newFactor = 'Later';
         if (task.factor === 'Hard') newFactor = 'Urgent';
         if (task.factor === 'Medium') newFactor = 'Normal';
-        return { ...task, factor: newFactor };
       }
-      return task;
+
+      // 2. ✨ THE DATA SANITIZER (Prevents React Error #31)
+      // Force all tags to be pure strings. If it's an object, try to extract the string, or drop it.
+      let safeTags = [];
+      if (Array.isArray(task.tags)) {
+        safeTags = task.tags.map(t => {
+          if (typeof t === 'string') return t;
+          if (typeof t === 'object' && t !== null && t.tag) return t.tag; // Extracts 'ai-ml' from the bad object
+          return null;
+        }).filter(Boolean); // Removes nulls
+      }
+
+      return { ...task, factor: newFactor, tags: safeTags };
     });
     return { updated, hasLegacy };
   };
