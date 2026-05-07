@@ -50,6 +50,55 @@ function App() {
   const [startDate, setStartDate] = useState('');
   const inputRef = useRef(null);
 
+  const [session, setSession] = useState(null);
+  const [isLocallyUnlocked, setIsLocallyUnlocked] = useState(false);
+  const [enteredPassword, setEnteredPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 1. Google Session Listener
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 2. The Local PIN Unlock Logic
+  const handleUnlock = async (pwd) => {
+    setIsLoading(true);
+    try {
+      const savedPin = localStorage.getItem('app_pin');
+      
+      if (!savedPin) {
+        // First time user: Save their PIN locally
+        localStorage.setItem('app_pin', pwd);
+        setIsLocallyUnlocked(true);
+        await fetchTasks();
+      } else if (pwd === savedPin) {
+        // Returning user: PIN matches
+        setIsLocallyUnlocked(true);
+        await fetchTasks();
+      } else {
+        alert("Incorrect Vault PIN!");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error: Please check your connection.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    handleUnlock(enteredPassword);
+  };
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -64,10 +113,7 @@ function App() {
   const [subtasks, setSubtasks] = useState([]);
   const [currentSubtaskInput, setCurrentSubtaskInput] = useState('');
 
-  const [enteredPassword, setEnteredPassword] = useState('');
   const [passwordOk, setPasswordOk] = useState(false);
-  
-  const [isLoading, setIsLoading] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
@@ -228,7 +274,7 @@ function App() {
       );
       
       const { tasks: fetchedTasks } = await Promise.race([
-        apiStorage.getTasks(pwd),
+        apiStorage.getTasks(),
         timeoutPromise
       ]);
 
@@ -401,26 +447,21 @@ function App() {
     updateLocalTasks(updatedTasks);
   };
 
-  const handleUnlock = async (pwd) => {
-    setIsLoading(true);
-    try {
-      await fetchTasks(pwd);
-      setPasswordOk(true);
-    } catch (error) {
-      if (error.message === "Unauthorized") {
-        alert("Wrong password! Try again.");
-      } else {
-        alert("Network error: Please check your connection.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
-    handleUnlock(enteredPassword);
-  };
+  // const handleUnlock = async (pwd) => {
+  //   setIsLoading(true);
+  //   try {
+  //     await fetchTasks(pwd);
+  //     setPasswordOk(true);
+  //   } catch (error) {
+  //     if (error.message === "Unauthorized") {
+  //       alert("Wrong password! Try again.");
+  //     } else {
+  //       alert("Network error: Please check your connection.");
+  //     }
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   useEffect(() => {
     if (passwordOk) fetchTasks(enteredPassword);
@@ -432,7 +473,7 @@ function App() {
 
     // 2. Pure Cloud Sync
     try {
-      await apiStorage.saveTasks(newTasks, enteredPassword);
+      await apiStorage.saveTasks(newTasks);
     } catch (error) {
       console.error("Cloud sync failed.", error);
       alert("Failed to save. Please check your internet connection.");
@@ -563,8 +604,9 @@ function App() {
   return (
     <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300 pb-[40px]">
       
-      {!passwordOk ? (
+      {!isLocallyUnlocked ? (
         <LoginScreen 
+          session = {session}
           enteredPassword={enteredPassword}
           setEnteredPassword={setEnteredPassword}
           handlePasswordSubmit={handlePasswordSubmit}

@@ -1,66 +1,100 @@
 import React from 'react';
+import { supabase } from '../supabaseClient';
 
 function LoginScreen({ 
+  session, 
   enteredPassword, 
   setEnteredPassword, 
   handlePasswordSubmit, 
-  isLoading, 
+  isLoading,
   hasBiometricSetup, 
   loginWithBiometrics, 
   setupBiometrics 
 }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-[80vh]">
-      <div className="bg-[#fff8e1] dark:bg-slate-800 py-[2rem] px-[1.5rem] sm:px-[3rem] rounded-[12px] shadow-[0_8px_16px_rgba(0,0,0,0.2)] w-[90vw] max-w-[320px] text-center transition-colors">
-        
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-orange-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-3xl shadow-inner">
-            🔒
-          </div>
-        </div>
-        
-        <h2 className="mb-[1.2rem] text-[#f57c00] font-bold text-xl">Tasks Manager :)</h2>
-        
-        <form onSubmit={handlePasswordSubmit}>
-          <input
-            type="password"
-            className="w-full p-[0.7rem] text-[1rem] border-[2px] border-[#f57c00] rounded-[8px] mb-[1rem] outline-none transition-colors focus:border-[#ef6c00] dark:bg-slate-700 dark:text-white dark:border-slate-600"
-            value={enteredPassword}
-            onChange={e => setEnteredPassword(e.target.value)}
-            placeholder="Password"
-            autoFocus
-          />
-          
-          <button type="submit" disabled={isLoading} className="bg-[#f57c00] text-white border-none p-[0.75rem] w-full rounded-[8px] font-bold cursor-pointer transition-colors hover:bg-[#ef6c00] disabled:opacity-70 mb-3 shadow-md">
-            {isLoading ? 'Unlocking...' : 'Unlock via Password'}
-          </button>
-        </form>
 
-        {hasBiometricSetup ? (
-          <button 
-            onClick={loginWithBiometrics} 
-            className="w-full p-[0.75rem] bg-slate-800 dark:bg-slate-600 text-white rounded-[8px] font-bold flex justify-center items-center gap-2 hover:bg-slate-700 dark:hover:bg-slate-500 transition-colors shadow-md"
-          >
-            <span>👆</span> Use Fingerprint
-          </button>
-        ) : (
-          <div className="mt-4 pt-4 border-t border-orange-200 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Want faster access?</p>
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) console.error("Google login failed:", error);
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center border border-slate-100 dark:border-slate-700">
+        
+        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500 mb-6">
+          Tasks Manager
+        </h1>
+
+        {/* STEP 1: NOT LOGGED INTO GOOGLE */}
+        {!session ? (
+          <div>
+            <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">
+              Sign in to securely sync your vault to the cloud.
+            </p>
             <button 
-              onClick={() => {
-                if(!enteredPassword) {
-                  alert("Please type your password first, then click Setup!");
-                  return;
-                }
-                setupBiometrics(enteredPassword);
-              }} 
-              className="w-full p-[0.5rem] bg-transparent border-[1.5px] border-slate-400 text-slate-600 dark:text-slate-300 rounded-[8px] font-semibold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              onClick={signInWithGoogle}
+              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-700 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-600 py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
             >
-              Setup Biometric Login
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              Sign in with Google
+            </button>
+          </div>
+        ) : (
+          
+        /* STEP 2: GOOGLE LOGGED IN -> ASK FOR LOCAL VAULT LOCK */
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <span className="inline-block w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-2xl mb-3 mx-auto shadow-inner">
+                🔒
+              </span>
+              <p className="text-slate-600 dark:text-slate-400 text-xs font-semibold">
+                Cloud sync active as <br/><span className="text-orange-600 dark:text-orange-400">{session.user.email}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
+              <input 
+                type="password" 
+                value={enteredPassword}
+                onChange={(e) => setEnteredPassword(e.target.value)}
+                placeholder="Enter App PIN"
+                disabled={isLoading}
+                className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500 text-center font-mono tracking-widest text-lg text-slate-800 dark:text-white disabled:opacity-50"
+              />
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full bg-orange-600 hover:bg-orange-500 disabled:bg-orange-400 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                {isLoading ? <span className="animate-spin">⏳</span> : 'Unlock Vault'}
+              </button>
+            </form>
+
+            <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700">
+              {hasBiometricSetup ? (
+                <button onClick={loginWithBiometrics} className="text-orange-500 font-bold text-sm hover:underline flex items-center justify-center gap-2 mx-auto w-full py-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                  <span>👆</span> Unlock with Fingerprint
+                </button>
+              ) : (
+                <button onClick={() => setupBiometrics(enteredPassword)} className="text-slate-500 text-xs hover:underline bg-slate-50 dark:bg-slate-800 py-2 px-4 rounded-lg border border-slate-200 dark:border-slate-600">
+                  Set up Biometric Unlock
+                </button>
+              )}
+            </div>
+
+            <button onClick={signOut} className="block mx-auto mt-6 text-xs text-red-500 hover:text-red-600 hover:underline">
+              Sign out of Google
             </button>
           </div>
         )}
-
       </div>
     </div>
   );
