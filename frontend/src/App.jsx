@@ -57,46 +57,32 @@ function App() {
 
   // 1. Google Session Listener
   useEffect(() => {
-    if (window.location.hash && window.location.hash.includes('access_token')) {
-      window.history.replaceState(null, document.title, window.location.pathname);
-    }
-
+    // Step 1: Let Supabase read the URL and get the session FIRST
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      
+      // Step 2: NOW that Supabase has the keys safely in memory, we can wipe the ugly URL
+      if (session && window.location.hash && window.location.hash.includes('access_token')) {
+        // A tiny 100ms delay ensures Supabase is completely finished processing
+        setTimeout(() => {
+          window.history.replaceState(null, document.title, window.location.pathname);
+        }, 100);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      
+      // Also catch it here just in case the login happens on a slight delay
+      if (event === 'SIGNED_IN' && window.location.hash && window.location.hash.includes('access_token')) {
+        setTimeout(() => {
+          window.history.replaceState(null, document.title, window.location.pathname);
+        }, 100);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  // 2. The Local PIN Unlock Logic
-  const handleUnlock = async (pwd) => {
-    setIsLoading(true);
-    try {
-      const savedPin = localStorage.getItem('app_pin');
-      
-      if (!savedPin) {
-        // First time user: Save their PIN locally
-        localStorage.setItem('app_pin', pwd);
-        setIsLocallyUnlocked(true);
-        await fetchTasks();
-      } else if (pwd === savedPin) {
-        // Returning user: PIN matches
-        setIsLocallyUnlocked(true);
-        await fetchTasks();
-      } else {
-        alert("Incorrect Vault PIN!");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Network error: Please check your connection.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
