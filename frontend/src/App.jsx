@@ -113,7 +113,7 @@ function App() {
   const [subtasks, setSubtasks] = useState([]);
   const [currentSubtaskInput, setCurrentSubtaskInput] = useState('');
 
-  const [passwordOk, setPasswordOk] = useState(false);
+  // const [passwordOk, setPasswordOk] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
