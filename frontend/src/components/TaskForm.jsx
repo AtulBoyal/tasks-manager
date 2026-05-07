@@ -20,13 +20,17 @@ function TaskForm({
 
   return (
     <div className="w-[92vw] max-w-[512px] rounded-[21px] mb-[29px] shadow-[0_7px_36px_#ff944740] dark:shadow-none px-[20px] sm:px-[28px] pt-[34px] pb-[24px] backdrop-blur-[2.5px] bg-[linear-gradient(107deg,#ffd59e_58%,#ffe7cc_100%)] dark:bg-none dark:bg-slate-800 dark:border dark:border-slate-700 transition-colors duration-300">
+
       <h2 className="text-center font-extrabold text-[2rem] mb-[22px] text-[#cc6000] dark:text-orange-500 tracking-[1px]">
         {editingTaskId ? '✏️ Update Task' : 'Add a New Task'}
       </h2>
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-y-[14px] items-center justify-center">
         
         <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-between sm:justify-start gap-[9px]">
-          <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">Task: </label>
+          <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">
+            Task: 
+          </label>
           <input 
             type="text" 
             className={`${inputStyles} w-full sm:w-auto`} 
@@ -43,7 +47,9 @@ function TaskForm({
         </div>
         
         <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-between sm:justify-start gap-[9px]">
-          <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">Priority:</label>
+          <label className="min-w-[62px] font-semibold text-[#bf6700] dark:text-orange-400 self-start sm:self-auto">
+            Priority:
+          </label>
           <select className={`${inputStyles} w-full sm:w-auto`} value={factor} onChange={e => setFactor(e.target.value)}>
             <option value="Urgent">🔴 Urgent</option>
             <option value="Normal">🟡 Normal</option>
@@ -55,7 +61,9 @@ function TaskForm({
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           {/* Start Date (Deferred) */}
           <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-900/40 px-3 py-2 rounded-lg border border-orange-100 dark:border-slate-700">
-            <label className="font-bold text-[#c57415] dark:text-orange-400 text-sm whitespace-nowrap">⏳ Appears On:</label>
+            <label className="font-bold text-[#c57415] dark:text-orange-400 text-sm whitespace-nowrap">
+              ⏳ Appears On:
+            </label>
             <input 
               type="date" 
               className="bg-transparent text-black dark:text-white font-semibold outline-none text-sm cursor-pointer" 
@@ -66,13 +74,14 @@ function TaskForm({
 
           {/* Deadline (Now Optional) */}
           <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-900/40 px-3 py-2 rounded-lg border border-orange-100 dark:border-slate-700">
-            <label className="font-bold text-[#c57415] dark:text-orange-400 text-sm whitespace-nowrap">🎯 Deadline:</label>
+            <label className="font-bold text-[#c57415] dark:text-orange-400 text-sm whitespace-nowrap">
+              🎯 Deadline:
+            </label>
             <input 
               type="date" 
               className="bg-transparent text-black dark:text-white font-semibold outline-none text-sm cursor-pointer" 
               value={lastDate || ''} 
               onChange={e => setLastDate(e.target.value)} 
-              // ✨ Notice we removed the "required" attribute here!
             />
           </div>
         </div>

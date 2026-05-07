@@ -19,7 +19,7 @@ function LoginScreen({
           </div>
         </div>
         
-        <h2 className="mb-[1.2rem] text-[#f57c00] font-bold text-xl">Tasks Manager</h2>
+        <h2 className="mb-[1.2rem] text-[#f57c00] font-bold text-xl">Tasks Manager :)</h2>
         
         <form onSubmit={handlePasswordSubmit}>
           <input
@@ -41,7 +41,7 @@ function LoginScreen({
             onClick={loginWithBiometrics} 
             className="w-full p-[0.75rem] bg-slate-800 dark:bg-slate-600 text-white rounded-[8px] font-bold flex justify-center items-center gap-2 hover:bg-slate-700 dark:hover:bg-slate-500 transition-colors shadow-md"
           >
-            <span>👆</span> Use Fingerprint / FaceID
+            <span>👆</span> Use Fingerprint
           </button>
         ) : (
           <div className="mt-4 pt-4 border-t border-orange-200 dark:border-slate-700">

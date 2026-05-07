@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Analytics } from "@vercel/analytics/react";
 import { apiStorage } from './supabaseStorage';
 import LoginScreen from './components/LoginScreen';
@@ -12,7 +12,7 @@ import { supabase } from './supabaseClient';
 import { generateAutoTags } from './utils/tagEngine';
 
 // ============================================================================
-// WEBAUTHN UTILITY FUNCTIONS (THE BUFFER CONVERSIONS)
+// WEBAUTHN UTILITY FUNCTIONS
 // ============================================================================
 const bufferToBase64URLString = (buffer) => {
   const bytes = new Uint8Array(buffer);
@@ -42,27 +42,21 @@ const generateRandomBuffer = (length = 32) => {
   window.crypto.getRandomValues(array);
   return array.buffer;
 };
-// ============================================================================
 
 function App() {
   const [taskName, setTaskName] = useState('');
   const [factor, setFactor] = useState('Normal'); 
   const [lastDate, setLastDate] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [isSaving, setIsSavnig ] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
   
-  // ✨ PHASE 1: INSTANT CACHE LOADING
-  // Using the correct key: 'task_manager_cache'
-  const [tasks, setTasks] = useState(() => {
-    try {
-      const cachedTasks = localStorage.getItem('task_manager_cache');
-      if (cachedTasks) {
-        return JSON.parse(cachedTasks);
-      }
-    } catch (error) {
-      console.error("Cache read error, starting fresh.", error);
-    }
-    return []; // Fallback to empty if cache is empty or corrupted
-  });
+  // Tasks strictly start empty and load from the cloud
+  const [tasks, setTasks] = useState([]);
   
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskLinks, setTaskLinks] = useState([]);
@@ -75,9 +69,7 @@ function App() {
   const [passwordOk, setPasswordOk] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(() => localStorage.getItem('task_manager_unsaved') === 'true');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
   const [filterDate, setFilterDate] = useState(''); 
@@ -88,17 +80,13 @@ function App() {
   const [hasBiometricSetup, setHasBiometricSetup] = useState(false);
   const [recurrence, setRecurrence] = useState('none');
 
-  // --- QUICK ADD STATE & LISTENERS ---
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // 💣 THE SERVICE WORKER ASSASSIN (Temporary Fix)
-  // Forces all devices to delete their cached code and download the fresh Vercel build
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(registrations => {
         for (let registration of registrations) {
           registration.unregister();
-          console.log("Old Service Worker successfully nuked.");
         }
       });
     }
@@ -153,66 +141,6 @@ function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
-
-  // ✨ PHASE 2: NETWORK STATUS TRACKING
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // ============================================================================
-  // ✨ THE BACKGROUND AUTO-FLUSHER
-  // Watches for the internet to return. If we have unsaved changes, it silently 
-  // pushes the local cache to the server.
-  // ============================================================================
-  useEffect(() => {
-    // We only want to trigger this if:
-    // 1. We just came back online
-    // 2. We actually have pending changes
-    // 3. The user is fully logged in
-    if (isOnline && hasUnsavedChanges && passwordOk) {
-      
-      const flushOfflineQueue = async () => {
-        setIsSyncing(true);
-        console.log("🚀 Internet restored! Flushing offline tasks to server...");
-        
-        try {
-          // Read the absolute latest truth from the local cache
-          const cachedData = localStorage.getItem('task_manager_cache');
-          if (cachedData) {
-            const parsedTasks = JSON.parse(cachedData);
-            
-            // Push to Supabase
-            await apiStorage.saveTasks(parsedTasks, enteredPassword);
-            
-            // Success! Clear the danger flags.
-            setHasUnsavedChanges(false);
-            localStorage.setItem('task_manager_unsaved', 'false');
-            console.log("✅ Background sync complete.");
-          }
-        } catch (error) {
-          console.error("⚠️ Background sync failed. Will retry later.", error);
-          // We intentionally leave hasUnsavedChanges as true so it tries again next time!
-        } finally {
-          setIsSyncing(false);
-        }
-      };
-
-      flushOfflineQueue();
-    }
-  // We strictly ONLY want this to fire when `isOnline` changes back to true.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnline]);
 
   const setupBiometrics = async (passwordToSave) => {
     if (!window.PublicKeyCredential) {
@@ -272,48 +200,30 @@ function App() {
   };
 
   const migrateLegacyTasks = (taskList) => {
-    let hasLegacy = false;
     const updated = taskList.map(task => {
-      // 1. Factor Migration (Your existing logic)
       let newFactor = task.factor;
       if (['Easy', 'Medium', 'Hard'].includes(task.factor)) {
-        hasLegacy = true;
         newFactor = 'Later';
         if (task.factor === 'Hard') newFactor = 'Urgent';
         if (task.factor === 'Medium') newFactor = 'Normal';
       }
 
-      // 2. ✨ THE DATA SANITIZER (Prevents React Error #31)
-      // Force all tags to be pure strings. If it's an object, try to extract the string, or drop it.
       let safeTags = [];
       if (Array.isArray(task.tags)) {
         safeTags = task.tags.map(t => {
           if (typeof t === 'string') return t;
-          if (typeof t === 'object' && t !== null && t.tag) return t.tag; // Extracts 'ai-ml' from the bad object
+          if (typeof t === 'object' && t !== null && t.tag) return t.tag; 
           return null;
-        }).filter(Boolean); // Removes nulls
+        }).filter(Boolean);
       }
 
       return { ...task, factor: newFactor, tags: safeTags };
     });
-    return { updated, hasLegacy };
+    return { updated };
   };
 
   const fetchTasks = useCallback(async (pwd) => {
     try {
-      const unsavedFlag = localStorage.getItem('task_manager_unsaved') === 'true';
-      if (unsavedFlag) {
-        const cached = localStorage.getItem('task_manager_cache');
-        if (cached) {
-          const { updated } = migrateLegacyTasks(JSON.parse(cached));
-          setTasks(updated);
-          setHasUnsavedChanges(true); 
-          return; 
-        }
-      }
-
-      // ✨ THE FIX: 5-Second Timeout Race
-      // Forces the network to give up if it hangs, preventing the infinite loading loop
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error("Network Timeout")), 5000)
       );
@@ -323,30 +233,12 @@ function App() {
         timeoutPromise
       ]);
 
-      const { updated, hasLegacy } = migrateLegacyTasks(fetchedTasks || []);
-      
+      const { updated } = migrateLegacyTasks(fetchedTasks || []);
       setTasks(updated);
-      setHasUnsavedChanges(hasLegacy);
-      
-      localStorage.setItem('task_manager_cache', JSON.stringify(updated));
-      localStorage.setItem('task_manager_unsaved', hasLegacy ? 'true' : 'false');
-      localStorage.setItem('offline_auth', pwd);
 
     } catch (error) {
       if (error.message === "Unauthorized") throw error;
-      
-      // If the network times out or fails, gracefully load the offline cache
-      if (pwd === localStorage.getItem('offline_auth')) {
-        console.warn("Network hung or failed. Forcing offline cache load.");
-        const cached = localStorage.getItem('task_manager_cache');
-        if (cached) {
-          const { updated } = migrateLegacyTasks(JSON.parse(cached));
-          setTasks(updated);
-          setHasUnsavedChanges(localStorage.getItem('task_manager_unsaved') === 'true');
-        }
-      } else {
-        throw new Error("Network Error & Offline Auth Failed");
-      }
+      throw new Error("Network Error. Please check your connection.");
     }
   }, []);
 
@@ -383,9 +275,6 @@ function App() {
     };
   }, [passwordOk]);
 
-  // ============================================================================
-  // ADVANCED RECURRENCE "LAZY RESET" ENGINE
-  // ============================================================================
   useEffect(() => {
     if (tasks.length === 0) return;
 
@@ -437,9 +326,6 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks]);
 
-  // ============================================================================
-  // AUTOMATED CONTEST TRACKER (CODEFORCES)
-  // ============================================================================
   useEffect(() => {
     if (!passwordOk || tasks.length === 0) return;
 
@@ -541,43 +427,16 @@ function App() {
     if (passwordOk) fetchTasks(enteredPassword);
   }, [passwordOk, fetchTasks, enteredPassword]);
 
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = ''; 
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
   const updateLocalTasks = async (newTasks) => {
-    // 1. Instantly update the screen and the local cache
+    // 1. Optimistic UI update
     setTasks(newTasks);
-    localStorage.setItem('task_manager_cache', JSON.stringify(newTasks));
-    
-    // ✨ PHASE 2: THE OFFLINE SHORT-CIRCUIT
-    // If we have no internet, flag as unsaved and STOP. Do not attempt a network request.
-    if (!navigator.onLine) {
-      console.log("Offline mode: Task safely queued in local cache.");
-      setHasUnsavedChanges(true);
-      localStorage.setItem('task_manager_unsaved', 'true');
-      return; 
-    }
 
-    // 2. We are online! Fire off to PostgreSQL
-    setIsSyncing(true);
+    // 2. Pure Cloud Sync
     try {
       await apiStorage.saveTasks(newTasks, enteredPassword);
-      setHasUnsavedChanges(false);
-      localStorage.setItem('task_manager_unsaved', 'false');
     } catch (error) {
-      console.error("Auto-sync failed. Saved locally.", error);
-      setHasUnsavedChanges(true);
-      localStorage.setItem('task_manager_unsaved', 'true');
-    } finally {
-      setIsSyncing(false);
+      console.error("Cloud sync failed.", error);
+      alert("Failed to save. Please check your internet connection.");
     }
   };
 
@@ -595,19 +454,26 @@ function App() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    const cleanTaskName = taskName.trim();
+    if (!cleanTaskName) {
+      alert("Please enter a task name.");
+      return; 
+    }
+
     let updatedTasks;
-    const smartTags = generateAutoTags(taskName, taskTags);
+    const smartTags = generateAutoTags(cleanTaskName, taskTags);
 
     if (editingTaskId) {
       updatedTasks = tasks.map(t => 
         t.id === editingTaskId ? { 
           ...t, 
-          name: taskName, 
+          name: cleanTaskName,
           factor, 
           last_date: lastDate || null, 
           start_date: startDate || null, 
           links: taskLinks, 
-          tags: taskTags, 
+          tags: smartTags, 
           subtasks: subtasks, 
           recurrence: recurrence 
         } : t
@@ -615,7 +481,7 @@ function App() {
     } else {
       updatedTasks = [...tasks, { 
         id: Date.now(), 
-        name: taskName, 
+        name: cleanTaskName,
         factor, 
         last_date: lastDate || null, 
         start_date: startDate || null, 
@@ -626,6 +492,7 @@ function App() {
         recurrence: recurrence 
       }];
     }
+    
     updateLocalTasks(updatedTasks);
     
     setTaskName(''); setFactor('Normal'); setLastDate(''); setStartDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setRecurrence('none'); setEditingTaskId(null);
@@ -657,7 +524,6 @@ function App() {
     return '';
   };
 
-  // ✨ FILTER AND SORT ACTIVE TASKS
   const currentDateStr = new Date().toISOString().split('T')[0];
 
   const filteredActiveTasks = tasks.filter(task => {
@@ -668,16 +534,6 @@ function App() {
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   }).sort((a, b) => {
-    // // TIER 1: Start Date (Earliest first. Tasks with no start date get pushed down)
-    // const hasStartA = !!a.start_date;
-    // const hasStartB = !!b.start_date;
-    // if (hasStartA !== hasStartB) return hasStartA ? -1 : 1;
-    // if (hasStartA && hasStartB) {
-    //   const startDiff = new Date(a.start_date) - new Date(b.start_date);
-    //   if (startDiff !== 0) return startDiff;
-    // }
-
-    // TIER 2: Deadline Date (Earliest first. Tasks with no deadline get pushed down)
     const hasDeadA = !!a.last_date;
     const hasDeadB = !!b.last_date;
     if (hasDeadA !== hasDeadB) return hasDeadA ? -1 : 1;
@@ -686,17 +542,14 @@ function App() {
       if (deadDiff !== 0) return deadDiff;
     }
 
-    // TIER 3: Priority Factor (Urgent -> Normal -> Later)
     const priorityMap = { 'Urgent': 1, 'Normal': 2, 'Later': 3 };
     const prioA = priorityMap[a.factor] || 4;
     const prioB = priorityMap[b.factor] || 4;
     if (prioA !== prioB) return prioA - prioB;
 
-    // TIER 4: Alphabetical by Name (A to Z)
     return a.name.localeCompare(b.name);
   });
 
-  // ✨ FILTER AND SORT COMPLETED TASKS
   const filteredCompletedTasks = tasks.filter(task => {
     if (!task.completed) return false;
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -707,42 +560,6 @@ function App() {
     if (!a.completion_date && !b.completion_date) return 0;
     return new Date(b.completion_date) - new Date(a.completion_date);
   });
-
-  // ============================================================================
-  // SYNC RECOVERY ENGINE (BULLETPROOF VERSION)
-  // ============================================================================
-  const handleSyncRecovery = () => {
-    // ✨ FIX: Use the correct key to peek into the cache
-    const localData = localStorage.getItem('task_manager_cache');
-    let unsavedList = "";
-    
-    if (localData) {
-      try {
-        const parsedTasks = JSON.parse(localData);
-        unsavedList = parsedTasks.slice(0, 5).map(t => `• ${t.name}`).join('\n');
-        if (parsedTasks.length > 5) unsavedList += `\n...and ${parsedTasks.length - 5} more`;
-      } catch (e) {
-        unsavedList = "(Data is corrupt and unreadable)";
-      }
-    }
-
-    const confirmReset = window.confirm(
-      `⚠️ SYNC ERROR RECOVERY ⚠️\n\n` +
-      `We detected corrupted data that is blocking your connection.\n` +
-      `To fix this, we need to clear your unsaved local changes and re-download the clean database.\n\n` +
-      `YOU WILL LOSE THE FOLLOWING UNSAVED TASKS:\n${unsavedList}\n\n` +
-      `Do you want to proceed? (Take a screenshot first if you need to save these!)`
-    );
-    
-    if (!confirmReset) return;
-
-    // ✨ FIX: Ensure we are removing the right keys!
-    localStorage.removeItem('task_manager_cache'); 
-    localStorage.removeItem('task_manager_unsaved'); 
-    alert("Local cache cleared! The app will now reload to fetch your live data.");
-    
-    window.location.reload(); 
-  };
 
   return (
     <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300 pb-[40px]">
@@ -762,19 +579,9 @@ function App() {
           <div className="min-h-screen flex flex-col items-center w-screen overflow-x-hidden">
             
             <Header 
-              hasUnsavedChanges={hasUnsavedChanges}
               isDarkMode={isDarkMode}
               setIsDarkMode={setIsDarkMode}
-              isSyncing={isSyncing}
-              handleSyncRecovery={handleSyncRecovery}
-              isOnline={isOnline}
             />
-
-            {!isOnline && hasUnsavedChanges && (
-              <div className="w-[96vw] max-w-[900px] mx-auto bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-400 px-4 py-2.5 rounded-[12px] mb-4 text-sm font-semibold flex items-center justify-center shadow-sm text-center">
-                <span>✈️ You are offline. Tasks are safely saved on this device. Open the app when you have internet to sync!</span>
-              </div>
-            )}
 
             <ConsistencyHeatmap tasks={tasks} />
 

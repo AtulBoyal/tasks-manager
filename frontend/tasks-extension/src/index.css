@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  width: 300px;
+  height: 400px;
+  margin: 0;
+  padding: 0;
+  background-color: #0f172a; /* Dark slate background so we can see it */
+}
