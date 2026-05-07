@@ -84,6 +84,32 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // 2. The Local PIN Unlock Logic
+  const handleUnlock = async (pwd) => {
+    setIsLoading(true);
+    try {
+      const savedPin = localStorage.getItem('app_pin');
+      
+      if (!savedPin) {
+        // First time user: Save their PIN locally
+        localStorage.setItem('app_pin', pwd);
+        setIsLocallyUnlocked(true);
+        await fetchTasks();
+      } else if (pwd === savedPin) {
+        // Returning user: PIN matches
+        setIsLocallyUnlocked(true);
+        await fetchTasks();
+      } else {
+        alert("Incorrect Vault PIN!");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error: Please check your connection.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     handleUnlock(enteredPassword);
