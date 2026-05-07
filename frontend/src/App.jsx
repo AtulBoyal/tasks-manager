@@ -141,15 +141,14 @@ function App() {
     const handleGlobalKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault(); 
-        // if (passwordOk) {
-        //   setIsQuickAddOpen(true);
-        // }
+        if (isLocallyUnlocked) {
+          setIsQuickAddOpen(true);
+        }
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  // }, [passwordOk]);
-  });
+  }, [isLocallyUnlocked]);
 
   const todayDate = new Date().toISOString().split('T')[0];
 
@@ -292,7 +291,7 @@ function App() {
   // REAL-TIME WEBSOCKET SUBSCRIPTION
   // ============================================================================
   useEffect(() => {
-    // if (!passwordOk) return; 
+    if (!isLocallyUnlocked) return;
 
     const taskListener = supabase
       .channel('public:tasks')
@@ -319,8 +318,7 @@ function App() {
     return () => {
       supabase.removeChannel(taskListener);
     };
-  // }, [passwordOk]);
-  });
+  }, [isLocallyUnlocked]);
 
   useEffect(() => {
     if (tasks.length === 0) return;
@@ -374,8 +372,7 @@ function App() {
   }, [tasks]);
 
   useEffect(() => {
-    // if (!passwordOk || tasks.length === 0) return;
-    if(tasks.length === 0) return;
+    if (!isLocallyUnlocked || tasks.length === 0) return;
 
     const fetchContests = async () => {
       const todayStr = new Date().toISOString().split('T')[0];
@@ -435,8 +432,7 @@ function App() {
 
     fetchContests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [passwordOk, tasks.length]);
-  }, [tasks.length]);
+  }, [isLocallyUnlocked, tasks.length]);
 
   const handleToggleSubtask = (taskId, subtaskId) => {
     const updatedTasks = tasks.map(t => {
@@ -450,26 +446,6 @@ function App() {
     });
     updateLocalTasks(updatedTasks);
   };
-
-  // const handleUnlock = async (pwd) => {
-  //   setIsLoading(true);
-  //   try {
-  //     await fetchTasks(pwd);
-  //     setPasswordOk(true);
-  //   } catch (error) {
-  //     if (error.message === "Unauthorized") {
-  //       alert("Wrong password! Try again.");
-  //     } else {
-  //       alert("Network error: Please check your connection.");
-  //     }
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   if (passwordOk) fetchTasks(enteredPassword);
-  // }, [passwordOk, fetchTasks, enteredPassword]);
 
   const updateLocalTasks = async (newTasks) => {
     // 1. Optimistic UI update
@@ -747,7 +723,7 @@ function App() {
         </div>
       )}
 
-      {/* {passwordOk && ( */}
+      {isLocallyUnlocked && (
         <button
           onClick={() => setIsQuickAddOpen(true)}
           title="Quick Add Task (Ctrl+K)"
@@ -755,7 +731,7 @@ function App() {
         >
           +
         </button>
-      {/* )} */}
+      )}
 
       <QuickAddModal 
         isOpen={isQuickAddOpen} 
