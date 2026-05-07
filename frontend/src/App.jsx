@@ -170,6 +170,7 @@ function App() {
     const smartTags = generateAutoTags(newTitle, []);
     const newTask = {
       id: Date.now(),
+      user_id: session.user.id,
       name: newTitle,
       factor: 'Normal',
       last_date: todayDate,
@@ -470,7 +471,7 @@ function App() {
       await apiStorage.saveTasks(newTasks);
     } catch (error) {
       console.error("Cloud sync failed.", error);
-      alert("Failed to save. Please check your internet connection.");
+      alert(`Database Error: ${error.message}`);
     }
   };
 
@@ -515,6 +516,7 @@ function App() {
     } else {
       updatedTasks = [...tasks, { 
         id: Date.now(), 
+        user_id: session.user.id,
         name: cleanTaskName,
         factor, 
         last_date: lastDate || null, 
