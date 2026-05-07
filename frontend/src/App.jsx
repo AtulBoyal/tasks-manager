@@ -375,7 +375,7 @@ function App() {
 
   useEffect(() => {
     // if (!passwordOk || tasks.length === 0) return;
-    if(tasks.length == 0) return;
+    if(tasks.length === 0) return;
 
     const fetchContests = async () => {
       const todayStr = new Date().toISOString().split('T')[0];
