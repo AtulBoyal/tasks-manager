@@ -94,9 +94,5 @@ With features to **add, edit, complete, and review** your work, it’s your digi
 
 ## 🧑‍💻 License
 
-- This project is open source and available under the [MIT License](LICENSE).
-
 Thank you for your interest and support.  
 **Hope you enjoy using TaskManager and find it as useful as I do! 💙**
-
-*Last updated: July 16, 2025*

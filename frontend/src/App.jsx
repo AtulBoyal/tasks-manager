@@ -48,7 +48,6 @@ function App() {
   const [factor, setFactor] = useState('Normal'); 
   const [lastDate, setLastDate] = useState('');
   const [startDate, setStartDate] = useState('');
-  const [isSaving, setIsSavnig ] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
