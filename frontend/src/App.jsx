@@ -59,6 +59,10 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, document.title, window.location.pathname);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
