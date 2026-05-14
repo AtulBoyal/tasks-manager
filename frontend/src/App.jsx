@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from 'react-hot-toast';
@@ -142,7 +142,7 @@ function App() {
     };
 
     fetchContests();
-  }, [isLocallyUnlocked, tasks.length]);
+  }, [isLocallyUnlocked, tasks, addTask]);
 
   const handleAddTag = (e) => {
     e.preventDefault();

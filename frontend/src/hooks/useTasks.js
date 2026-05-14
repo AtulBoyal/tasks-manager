@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { taskService } from '../services/taskService';
-import { supabase } from '../supabaseClient';
 
 export const useTasks = (userId, isUnlocked) => {
   const [tasks, setTasks] = useState([]);
@@ -30,7 +29,7 @@ export const useTasks = (userId, isUnlocked) => {
     setTasks(prev => [...prev, created]);
 
     return created;
-  });
+  }, []);
 
   // UPDATE
   const editTask = async (taskId, updates) => {

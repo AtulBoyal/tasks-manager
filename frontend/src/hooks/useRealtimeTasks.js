@@ -59,6 +59,6 @@ export const useRealtimeTasks = ({
       supabase.removeChannel(taskListener);
     };
 
-  }, [isLocallyUnlocked, setTasks]);
+  }, [isLocallyUnlocked, setTasks, userId]);
 
 };
