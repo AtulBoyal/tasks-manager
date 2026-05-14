@@ -1,135 +1,56 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { Analytics } from "@vercel/analytics/react";
-import { apiStorage } from './supabaseStorage';
-import LoginScreen from './components/LoginScreen';
-import Header from './components/Header';
-import TaskForm from './components/TaskForm';
-import TaskTable from './components/TaskTable';
-import FilterBar from './components/FilterBar';
-import ConsistencyHeatmap from './components/ConsistencyHeatmap';
-import QuickAddModal from './components/QuickAddModal';
-import { supabase } from './supabaseClient';
+import { Toaster } from 'react-hot-toast';
+
 import { generateAutoTags } from './utils/tagEngine';
-import { createTask, updateTask, deleteTask } from './services/taskService';
+import { formatDate, getFactorClass } from './utils/formatters';
 
-// ============================================================================
-// WEBAUTHN UTILITY FUNCTIONS
-// ============================================================================
-const bufferToBase64URLString = (buffer) => {
-  const bytes = new Uint8Array(buffer);
-  let str = '';
-  for (let charCode of bytes) {
-    str += String.fromCharCode(charCode);
-  }
-  const base64String = btoa(str);
-  return base64String.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-};
+import { useAuth } from './hooks/useAuth';
+import { useTasks } from './hooks/useTasks';
+import { useTaskFilters } from './hooks/useTaskFilters';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useVaultLock } from './hooks/useVaultLock';
+import { useRealtimeTasks } from './hooks/useRealtimeTasks';
+import { useRecurringTasks } from './hooks/useRecurringTasks';
+import { useBiometrics } from './hooks/useBiometrics';
+import { useTaskActions } from './hooks/useTaskActions';
+import { useTaskForm } from './hooks/useTaskForm';
 
-const base64URLStringToBuffer = (base64URLString) => {
-  const base64 = base64URLString.replace(/-/g, '+').replace(/_/g, '/');
-  const padLength = (4 - (base64.length % 4)) % 4;
-  const padded = base64.padEnd(base64.length + padLength, '=');
-  const binary = atob(padded);
-  const buffer = new ArrayBuffer(binary.length);
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return buffer;
-};
+import ProtectedRoute from './routes/ProtectedRoute';
+import { TaskProvider } from './context/TaskContext';
+import toast from 'react-hot-toast';
 
-const generateRandomBuffer = (length = 32) => {
-  const array = new Uint8Array(length);
-  window.crypto.getRandomValues(array);
-  return array.buffer;
-};
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Settings = lazy(() => import('./pages/Settings'));
+const AnalyticsPage = lazy(() => import('./pages/Analytics'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
-function App() {
-  const [taskName, setTaskName] = useState('');
-  const [factor, setFactor] = useState('Normal'); 
-  const [lastDate, setLastDate] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const inputRef = useRef(null);
+function App() {  
+  const { session } = useAuth();
 
-  const [session, setSession] = useState(null);
-  const [isLocallyUnlocked, setIsLocallyUnlocked] = useState(false);
-  const [enteredPassword, setEnteredPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const {isLocallyUnlocked, enteredPassword, setEnteredPassword, isLoading, handleUnlock} = 
+  useVaultLock();
 
-  // 1. Google Session Listener
-  useEffect(() => {
-    // Step 1: Let Supabase read the URL and get the session FIRST
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      
-      // Step 2: NOW that Supabase has the keys safely in memory, we can wipe the ugly URL
-      if (session && window.location.hash && window.location.hash.includes('access_token')) {
-        // A tiny 100ms delay ensures Supabase is completely finished processing
-        setTimeout(() => {
-          window.history.replaceState(null, document.title, window.location.pathname);
-        }, 100);
-      }
-    });
+  const {tasks, setTasks, fetchTasks, addTask, editTask, removeTask} = useTasks(session?.user?.id, isLocallyUnlocked);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      
-      // Also catch it here just in case the login happens on a slight delay
-      if (event === 'SIGNED_IN' && window.location.hash && window.location.hash.includes('access_token')) {
-        setTimeout(() => {
-          window.history.replaceState(null, document.title, window.location.pathname);
-        }, 100);
-      }
-    });
+  const {taskName, setTaskName, factor, setFactor, lastDate,  setLastDate, startDate, setStartDate, taskLinks, setTaskLinks, taskTags, setTaskTags, currentTagInput, setCurrentTagInput, subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput, recurrence, setRecurrence, editingTaskId, setEditingTaskId, resetForm} = useTaskForm();
 
-    return () => subscription.unsubscribe();
-  }, []);
+  const {handleDelete, handleComplete, handleUndoComplete, handleInlineUpdate, handleToggleSubtask, handleQuickAdd} = 
+  useTaskActions({tasks, setTasks, addTask, editTask, removeTask, session});
 
-  // 2. The Local PIN Unlock Logic
-  const handleUnlock = async (pwd) => {
-    setIsLoading(true);
-    try {
-      const savedPin = localStorage.getItem('app_pin');
-      
-      if (!savedPin) {
-        // First time user: Save their PIN locally
-        localStorage.setItem('app_pin', pwd);
-        setIsLocallyUnlocked(true);
-        await fetchTasks();
-      } else if (pwd === savedPin) {
-        // Returning user: PIN matches
-        setIsLocallyUnlocked(true);
-        await fetchTasks();
-      } else {
-        alert("Incorrect Vault PIN!");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Network error: Please check your connection.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {hasBiometricSetup, setupBiometrics, loginWithBiometrics} = 
+  useBiometrics({handleUnlock, setEnteredPassword});
+
+
+  useEffect(() => {if (isLocallyUnlocked && session?.user?.id) {fetchTasks();}}, [isLocallyUnlocked, session, fetchTasks]);
+  
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     handleUnlock(enteredPassword);
   };
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-  
-  // Tasks strictly start empty and load from the cloud
-  const [tasks, setTasks] = useState([]);
-  
-  const [editingTaskId, setEditingTaskId] = useState(null);
-  const [taskLinks, setTaskLinks] = useState([]);
-  const [taskTags, setTaskTags] = useState([]);
-  const [currentTagInput, setCurrentTagInput] = useState('');
-  const [subtasks, setSubtasks] = useState([]);
-  const [currentSubtaskInput, setCurrentSubtaskInput] = useState('');
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
   const [filterDate, setFilterDate] = useState(null); 
@@ -137,10 +58,12 @@ function App() {
   const [showCompleted, setShowCompleted] = useState(false);  
 
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-  const [hasBiometricSetup, setHasBiometricSetup] = useState(false);
-  const [recurrence, setRecurrence] = useState('none');
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const {filteredActiveTasks, filteredCompletedTasks} = 
+  useTaskFilters({tasks, filterStatus, filterFactor, filterDate, searchQuery});
+  useRealtimeTasks({isLocallyUnlocked, setTasks});
+  useRecurringTasks({tasks, setTasks, editTask});
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -152,55 +75,9 @@ function App() {
     }
   }, []);
 
-  useEffect(() => {
-    const handleGlobalKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault(); 
-        if (isLocallyUnlocked) {
-          setIsQuickAddOpen(true);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isLocallyUnlocked]);
+  useKeyboardShortcuts({isLocallyUnlocked, setIsQuickAddOpen});
 
   const todayDate = new Date().toISOString().split('T')[0];
-
-  const handleQuickAdd = async (newTitle) => {
-    const smartTags = generateAutoTags(newTitle, []);
-
-    const newTask = {
-      id: Date.now(),
-      user_id: session.user.id,
-      name: newTitle.trim(),
-      factor: factor || 'Normal',
-      last_date: lastDate || null,
-      start_date: startDate || null,
-      completed: false,
-      completion_date: null,
-      recurrence: recurrence || 'none',
-      links: Array.isArray(taskLinks) ? taskLinks : [],
-      tags: Array.isArray(smartTags) ? smartTags : [],
-      subtasks: Array.isArray(subtasks) ? subtasks : []
-    };
-
-    try {
-      const createdTask = await createTask(newTask);
-
-      setTasks(prev => [...prev, createdTask]);
-    } catch (error) {
-      console.error("Quick add failed:", error);
-    }
-  };
-
-  useEffect(() => {
-    const credId = localStorage.getItem('biometric_credential_id');
-    const savedPass = localStorage.getItem('biometric_password');
-    if (credId && savedPass && window.PublicKeyCredential) {
-      setHasBiometricSetup(true);
-    }
-  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -211,190 +88,6 @@ function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
-
-  const setupBiometrics = async (passwordToSave) => {
-    if (!window.PublicKeyCredential) {
-      alert("Your device/browser does not support biometrics.");
-      return;
-    }
-    try {
-      const challenge = generateRandomBuffer();
-      const userId = generateRandomBuffer(16);
-
-      const publicKeyCredentialCreationOptions = {
-        challenge,
-        rp: { name: "Tasks Manager", id: window.location.hostname },
-        user: { id: userId, name: "admin", displayName: "Admin" },
-        pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-        timeout: 60000,
-      };
-
-      const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
-      
-      localStorage.setItem('biometric_credential_id', bufferToBase64URLString(credential.rawId));
-      localStorage.setItem('biometric_password', passwordToSave);
-      setHasBiometricSetup(true);
-      alert("Fingerprint successfully registered!");
-    } catch (err) {
-      console.error("Biometric setup failed:", err);
-      alert("Failed to set up fingerprint. You might have cancelled the prompt.");
-    }
-  };
-
-  const loginWithBiometrics = async () => {
-    try {
-      const credentialIdString = localStorage.getItem('biometric_credential_id');
-      const savedPassword = localStorage.getItem('biometric_password');
-      
-      if (!credentialIdString || !savedPassword) throw new Error("No biometrics set up");
-
-      const publicKeyCredentialRequestOptions = {
-        challenge: generateRandomBuffer(),
-        allowCredentials: [{
-          id: base64URLStringToBuffer(credentialIdString),
-          type: 'public-key',
-        }],
-        userVerification: "required",
-        timeout: 60000,
-      };
-
-      await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
-      
-      setEnteredPassword(savedPassword);
-      handleUnlock(savedPassword); 
-      
-    } catch (err) {
-      console.error("Biometric login failed:", err);
-    }
-  };
-
-  const migrateLegacyTasks = (taskList) => {
-    const updated = taskList.map(task => {
-      let newFactor = task.factor;
-      if (['Easy', 'Medium', 'Hard'].includes(task.factor)) {
-        newFactor = 'Later';
-        if (task.factor === 'Hard') newFactor = 'Urgent';
-        if (task.factor === 'Medium') newFactor = 'Normal';
-      }
-
-      let safeTags = [];
-      if (Array.isArray(task.tags)) {
-        safeTags = task.tags.map(t => {
-          if (typeof t === 'string') return t;
-          if (typeof t === 'object' && t !== null && t.tag) return t.tag; 
-          return null;
-        }).filter(Boolean);
-      }
-
-      return { ...task, factor: newFactor, tags: safeTags };
-    });
-    return { updated };
-  };
-
-  const fetchTasks = useCallback(async (pwd) => {
-    try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Network Timeout")), 5000)
-      );
-      
-      const { tasks: fetchedTasks } = await Promise.race([
-        apiStorage.getTasks(),
-        timeoutPromise
-      ]);
-
-      const { updated } = migrateLegacyTasks(fetchedTasks || []);
-      setTasks(updated);
-
-    } catch (error) {
-      if (error.message === "Unauthorized") throw error;
-      throw new Error("Network Error. Please check your connection.");
-    }
-  }, []);
-
-  // ============================================================================
-  // REAL-TIME WEBSOCKET SUBSCRIPTION
-  // ============================================================================
-  useEffect(() => {
-    if (!isLocallyUnlocked) return;
-
-    const taskListener = supabase
-      .channel('public:tasks')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            setTasks((prevTasks) => {
-              const taskExists = prevTasks.some(t => t.id === payload.new.id);
-              if (taskExists) {
-                return prevTasks.map(t => t.id === payload.new.id ? payload.new : t);
-              } else {
-                return [...prevTasks, payload.new];
-              }
-            });
-          } else if (payload.eventType === 'DELETE') {
-            setTasks((prevTasks) => prevTasks.filter(t => t.id !== payload.old.id));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(taskListener);
-    };
-  }, [isLocallyUnlocked]);
-
-  useEffect(() => {
-    if (tasks.length === 0) return;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const lastReset = localStorage.getItem('last_habit_reset');
-
-    if (lastReset !== todayStr) {
-      let needsUpdate = false;
-      
-      const resetTasks = tasks.map(t => {
-        if (t.completed && t.recurrence && t.recurrence !== 'none') {
-          const compDate = t.completion_date ? t.completion_date.split('T')[0] : null;
-          
-          if (compDate !== todayStr && compDate !== null) {
-            needsUpdate = true;
-            
-            let newDeadline = t.last_date ? new Date(t.last_date) : null;
-            let newStartDate = t.start_date ? new Date(t.start_date) : null;
-            
-            if (t.recurrence === 'daily') {
-              if (newDeadline) newDeadline = new Date(); 
-              if (newStartDate) newStartDate = new Date();
-            } else if (t.recurrence === 'weekly') {
-              if (newDeadline) newDeadline.setDate(newDeadline.getDate() + 7); 
-              if (newStartDate) newStartDate.setDate(newStartDate.getDate() + 7);
-            } else if (t.recurrence === 'monthly') {
-              if (newDeadline) newDeadline.setMonth(newDeadline.getMonth() + 1); 
-              if (newStartDate) newStartDate.setMonth(newStartDate.getMonth() + 1);
-            }
-
-            return { 
-              ...t, 
-              completed: false, 
-              completion_date: null,
-              last_date: newDeadline ? newDeadline.toISOString().split('T')[0] : null,
-              start_date: newStartDate ? newStartDate.toISOString().split('T')[0] : null,
-              subtasks: t.subtasks ? t.subtasks.map(st => ({...st, completed: false})) : []
-            };
-          }
-        }
-        return t;
-      });
-
-      if (needsUpdate) {
-        updateLocalTasks(resetTasks);
-      }
-      localStorage.setItem('last_habit_reset', todayStr);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks]);
 
   useEffect(() => {
     if (!isLocallyUnlocked || tasks.length === 0) return;
@@ -410,13 +103,10 @@ function App() {
 
           if (data.status === 'OK') {
             const upcoming = data.result.filter(c => c.phase === 'BEFORE');
-            
-            let newTasksAdded = false;
-            let currentTasks = [...tasks];
 
-            upcoming.forEach((contest, index) => {
+            for (const [index, contest] of upcoming.entries()) {
               const contestName = `🏆 CF: ${contest.name}`;
-              const alreadyExists = currentTasks.some(t => t.name === contestName);
+              const alreadyExists = tasks.some(t => t.name === contestName);
 
               if (!alreadyExists) {
                 const contestDateObj = new Date(contest.startTimeSeconds * 1000);
@@ -438,71 +128,21 @@ function App() {
                   ]
                 };
                 
-                currentTasks.push(newTask);
-                newTasksAdded = true;
+                await addTask(newTask);
               }
-            });
-
-            if (newTasksAdded) {
-              updateLocalTasks(currentTasks);
             }
             
             localStorage.setItem('last_cf_fetch', todayStr);
           }
         } catch (error) {
           console.error("Failed to fetch Codeforces contests", error);
+          toast.error("Failed to fetch Codeforces contests");
         }
       }
     };
 
     fetchContests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLocallyUnlocked, tasks.length]);
-
-  const handleToggleSubtask = (taskId, subtaskId) => {
-    const updatedTasks = tasks.map(t => {
-      if (t.id === taskId && t.subtasks) {
-        const updatedSubtasks = t.subtasks.map(st => 
-          st.id === subtaskId ? { ...st, completed: !st.completed } : st
-        );
-        return { ...t, subtasks: updatedSubtasks };
-      }
-      return t;
-    });
-    updateLocalTasks(updatedTasks);
-  };
-
-  const updateLocalTasks = async (newTasks) => {
-    // const sanitizedTasks = newTasks.map(task => ({
-    //   ...task,
-    //   start_date: task.start_date || null,
-    //   last_date: task.last_date || null,
-    // }));
-
-    // console.log(
-    //   "TASKS BEING SAVED:",
-    //   sanitizedTasks.map(t => ({
-    //     id: t.id,
-    //     user_id: t.user_id,
-    //     name: t.name
-    //   }))
-    // );
-    // 1. Optimistic UI update
-    setTasks(newTasks);
-
-    // 2. Pure Cloud Sync
-    // try {
-    //   await apiStorage.saveTasks(sanitizedTasks);
-    // } catch (error) {
-    //   console.error("Cloud sync failed.", error);
-    //   alert(`Database Error: ${error.message}`);
-    // }
-  };
-
-  const handleInlineUpdate = (taskId, field, value) => {
-    const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, [field]: value } : t);
-    updateLocalTasks(updatedTasks);
-  };
 
   const handleAddTag = (e) => {
     e.preventDefault();
@@ -520,23 +160,29 @@ function App() {
       return; 
     }
 
-    let updatedTasks;
     const smartTags = generateAutoTags(cleanTaskName, taskTags);
 
     if (editingTaskId) {
-      updatedTasks = tasks.map(t => 
-        t.id === editingTaskId ? { 
-          ...t, 
+      try {
+        await editTask(editingTaskId, {
           name: cleanTaskName,
-          factor, 
-          last_date: lastDate || null, 
-          start_date: startDate || null, 
-          links: taskLinks, 
-          tags: smartTags, 
-          subtasks: subtasks, 
-          recurrence: recurrence 
-        } : t
-      );
+          factor,
+          last_date: lastDate || null,
+          start_date: startDate || null,
+          links: taskLinks,
+          tags: smartTags,
+          subtasks,
+          recurrence
+        });
+        toast.success('Task updated');
+
+      } catch (error) {
+        console.error("Failed to update task:", error);
+      }
+
+      resetForm();
+
+      return;
     } else {
       const newTask = {
         id: Date.now(),
@@ -553,129 +199,12 @@ function App() {
         subtasks: Array.isArray(subtasks) ? subtasks : []
       };
 
-      try {
-        const createdTask = await createTask(newTask);
+      await addTask(newTask);
+      toast.success('Task created successfully');
 
-        setTasks(prev => [...prev, createdTask]);
-      } catch (error) {
-        console.error("Failed to create task:", error);
-      }
-
-      setTaskName('');
-      setFactor('Normal');
-      setLastDate('');
-      setStartDate('');
-      setTaskLinks([]);
-      setTaskTags([]);
-      setSubtasks([]);
-      setRecurrence('none');
-      setEditingTaskId(null);
+      resetForm();
 
       return;
-    }
-    
-    updateLocalTasks(updatedTasks);
-    
-    setTaskName('');
-    setFactor('Normal');
-    setLastDate('');
-    setStartDate('');
-    setTaskLinks([]);
-    setTaskTags([]);
-    setSubtasks([]);
-    setRecurrence('none');
-    setEditingTaskId(null);
-  };
-
-  const handleDelete = async (id) => {
-    const previousTasks = tasks;
-
-    try {
-      // Optimistic delete
-      setTasks(prev => prev.filter(t => t.id !== id));
-
-      await deleteTask(id);
-
-    } catch (error) {
-      console.error("Delete failed:", error);
-
-      // Rollback
-      setTasks(previousTasks);
-    }
-  };
-
-  const handleComplete = async (task) => {
-    try {
-      // Optimistic UI
-      setTasks(prev =>
-        prev.map(t =>
-          t.id === task.id
-            ? {
-                ...t,
-                completed: true,
-                completion_date: new Date().toISOString()
-              }
-            : t
-        )
-      );
-
-      // Database update
-      await updateTask(task.id, {
-        completed: true,
-        completion_date: new Date().toISOString()
-      });
-
-    } catch (error) {
-      console.error("Failed to complete task:", error);
-
-      // Rollback UI
-      setTasks(prev =>
-        prev.map(t =>
-          t.id === task.id
-            ? {
-                ...t,
-                completed: false,
-                completion_date: null
-              }
-            : t
-        )
-      );
-    }
-  };
-
-  const handleUndoComplete = async (task) => {
-    try {
-      setTasks(prev =>
-        prev.map(t =>
-          t.id === task.id
-            ? {
-                ...t,
-                completed: false,
-                completion_date: null
-              }
-            : t
-        )
-      );
-
-      await updateTask(task.id, {
-        completed: false,
-        completion_date: null
-      });
-
-    } catch (error) {
-      console.error("Failed to undo completion:", error);
-
-      setTasks(prev =>
-        prev.map(t =>
-          t.id === task.id
-            ? {
-                ...t,
-                completed: true,
-                completion_date: task.completion_date
-              }
-            : t
-        )
-      );
     }
   };
 
@@ -691,217 +220,139 @@ function App() {
     setRecurrence(task.recurrence || 'none');
   };
 
-  const formatDate = (isoDate) => {
-    if (!isoDate) return '';
-    const date = new Date(isoDate);
-    return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
-  };
-
-  const getFactorClass = (factor) => {
-    if (factor === 'Later') return 'bg-emerald-500 dark:bg-emerald-600 text-white';
-    if (factor === 'Normal') return 'bg-amber-500 dark:bg-amber-600 text-white';
-    if (factor === 'Urgent') return 'bg-red-500 dark:bg-red-600 text-white';
-    return '';
-  };
-
-  const currentDateStr = new Date().toISOString().split('T')[0];
-
-  const filteredActiveTasks = tasks.filter(task => {
-    if (task.completed) return false;
-    if (task.start_date && task.start_date > currentDateStr) return false;
-    if (filterStatus === 'Active' && filterDate && task.last_date !== filterDate) return false;
-    if (filterStatus !== 'Active' && filterStatus !== 'All' && task.factor !== filterStatus) return false;
-    if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  }).sort((a, b) => {
-    const hasDeadA = !!a.last_date;
-    const hasDeadB = !!b.last_date;
-    if (hasDeadA !== hasDeadB) return hasDeadA ? -1 : 1;
-    if (hasDeadA && hasDeadB) {
-      const deadDiff = new Date(a.last_date) - new Date(b.last_date);
-      if (deadDiff !== 0) return deadDiff;
-    }
-
-    const priorityMap = { 'Urgent': 1, 'Normal': 2, 'Later': 3 };
-    const prioA = priorityMap[a.factor] || 4;
-    const prioB = priorityMap[b.factor] || 4;
-    if (prioA !== prioB) return prioA - prioB;
-
-    return a.name.localeCompare(b.name);
-  });
-
-  const filteredCompletedTasks = tasks.filter(task => {
-    if (!task.completed) return false;
-    if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  }).sort((a, b) => {
-    if (!a.completion_date && b.completion_date) return 1;
-    if (a.completion_date && !b.completion_date) return -1;
-    if (!a.completion_date && !b.completion_date) return 0;
-    return new Date(b.completion_date) - new Date(a.completion_date);
-  });
-
   return (
+    <>
+      <Toaster position="top-right" />
+      {/* toast.success('Task completed!');
+      toast.error(error.message); */}
     <div className="min-h-screen font-sans m-0 p-0 bg-[linear-gradient(135deg,#f7fafc_24%,#ffe5c2_100%)] dark:bg-none dark:bg-slate-900 transition-colors duration-300 pb-[40px]">
-      
-      {!isLocallyUnlocked ? (
-        <LoginScreen 
-          session = {session}
-          enteredPassword={enteredPassword}
-          setEnteredPassword={setEnteredPassword}
-          handlePasswordSubmit={handlePasswordSubmit}
-          isLoading={isLoading}
-          hasBiometricSetup={hasBiometricSetup}
-          loginWithBiometrics={loginWithBiometrics}
-          setupBiometrics={setupBiometrics}
-        />
-      ) : (
-        <div>
-          <div className="min-h-screen flex flex-col items-center w-screen overflow-x-hidden">
-            
-            <Header 
-              isDarkMode={isDarkMode}
-              setIsDarkMode={setIsDarkMode}
-            />
-
-            <ConsistencyHeatmap tasks={tasks} />
-
-            <TaskForm 
-              taskName={taskName} 
-              setTaskName={setTaskName}
-              factor={factor} 
-              setFactor={setFactor}
-              lastDate={lastDate || ''} 
-              setLastDate={setLastDate} 
-              todayDate={todayDate}
-              currentTagInput={currentTagInput} 
-              setCurrentTagInput={setCurrentTagInput} 
-              handleAddTag={handleAddTag}
-              taskTags={taskTags} 
-              setTaskTags={setTaskTags}
-              taskLinks={taskLinks} 
-              setTaskLinks={setTaskLinks}
-              editingTaskId={editingTaskId} 
-              setEditingTaskId={setEditingTaskId}
-              handleSubmit={handleSubmit}
-              subtasks={subtasks}
-              setSubtasks={setSubtasks}
-              currentSubtaskInput={currentSubtaskInput}
-              setCurrentSubtaskInput={setCurrentSubtaskInput}
-              recurrence={recurrence}
-              setRecurrence={setRecurrence}
-              startDate={startDate}
-              setStartDate={setStartDate}
-            />
-
-            <div className="w-[96vw] max-w-[900px] mx-auto rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[12px] sm:px-[18px] pb-[22px] transition-colors duration-300">
-              <FilterBar 
-                searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-                filterStatus={filterStatus} setFilterStatus={setFilterStatus}
-                filterFactor={filterFactor} setFilterFactor={setFilterFactor}
-                filterDate={filterDate} setFilterDate={setFilterDate}
-              />
-              
-              {(filterStatus === 'Active' || filterStatus === 'All') && (
-                <>
-                  {filteredActiveTasks.some(t => t.recurrence && t.recurrence !== 'none') && (
-                    <div className="mb-8">
-                      <h2 className="text-center font-extrabold text-[1.5rem] text-[#cc6000] dark:text-orange-500 mb-2 flex items-center justify-center gap-2">
-                        <span>🔁</span> Daily Habits
-                      </h2>
-                      <TaskTable 
-                        tasks={filteredActiveTasks.filter(t => t.recurrence && t.recurrence !== 'none')}
-                        isCompleted={false}
-                        todayDate={todayDate}
-                        targetDate={filterDate || todayDate}
-                        formatDate={formatDate}
-                        getFactorClass={getFactorClass}
-                        handleInlineUpdate={handleInlineUpdate}
-                        handleEdit={handleEdit}
-                        handleDelete={handleDelete}
-                        handleComplete={handleComplete}
-                        handleToggleSubtask={handleToggleSubtask}
-                      />
-                    </div>
-                  )}
-
-                  <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400 mb-[13px] mt-4">
-                    Active Tasks
-                  </h2>
-                  <TaskTable 
-                    tasks={filteredActiveTasks.filter(t => !t.recurrence || t.recurrence === 'none')}
-                    isCompleted={false}
+      <ProtectedRoute
+        isLocallyUnlocked={isLocallyUnlocked}
+        session={session}
+        enteredPassword={enteredPassword}
+        setEnteredPassword={setEnteredPassword}
+        handlePasswordSubmit={handlePasswordSubmit}
+        isLoading={isLoading}
+        hasBiometricSetup={hasBiometricSetup}
+        loginWithBiometrics={loginWithBiometrics}
+        setupBiometrics={setupBiometrics}
+      >
+        <Suspense
+          fallback={
+            <div className="min-h-screen flex items-center justify-center text-2xl font-bold text-orange-500">
+              Loading...
+            </div>
+          }
+        >
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <TaskProvider
+                  value={{
+                    tasks,
+                    setTasks,
+                    filteredActiveTasks,
+                    filteredCompletedTasks,
+                    handleDelete,
+                    handleComplete,
+                    handleUndoComplete,
+                    handleInlineUpdate,
+                    handleToggleSubtask,
+                    handleEdit,
+                    formatDate,
+                    getFactorClass,
+                    todayDate
+                  }}
+                >
+                  <Dashboard
+                    isDarkMode={isDarkMode}
+                    setIsDarkMode={setIsDarkMode}
+                    tasks={tasks}
+                    taskFormProps={{
+                      taskName,
+                      setTaskName,
+                      factor,
+                      setFactor,
+                      lastDate,
+                      setLastDate,
+                      todayDate,
+                      currentTagInput,
+                      setCurrentTagInput,
+                      handleAddTag,
+                      taskTags,
+                      setTaskTags,
+                      taskLinks,
+                      setTaskLinks,
+                      editingTaskId,
+                      setEditingTaskId,
+                      handleSubmit,
+                      subtasks,
+                      setSubtasks,
+                      currentSubtaskInput,
+                      setCurrentSubtaskInput,
+                      recurrence,
+                      setRecurrence,
+                      startDate,
+                      setStartDate
+                    }}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    filterStatus={filterStatus}
+                    setFilterStatus={setFilterStatus}
+                    filterFactor={filterFactor}
+                    setFilterFactor={setFilterFactor}
+                    filterDate={filterDate}
+                    setFilterDate={setFilterDate}
+                    filteredActiveTasks={filteredActiveTasks}
+                    filteredCompletedTasks={filteredCompletedTasks}
                     todayDate={todayDate}
-                    targetDate={filterDate || todayDate}
                     formatDate={formatDate}
                     getFactorClass={getFactorClass}
                     handleInlineUpdate={handleInlineUpdate}
                     handleEdit={handleEdit}
                     handleDelete={handleDelete}
                     handleComplete={handleComplete}
-                    handleToggleSubtask={handleToggleSubtask}
-                  />
-                </>
-              )}
-            </div>
-            
-            {tasks.some(task => task.completed) && (
-              <div className="w-[96vw] max-w-[900px] mx-auto mt-[34px] rounded-[18px] shadow-[0_2px_14px_#ffe5a940] dark:shadow-none bg-[#fffbe7] dark:bg-slate-800 dark:border dark:border-slate-700 pt-[28px] px-[12px] sm:px-[18px] pb-[22px] mb-[40px] transition-colors duration-300">
-                
-                <div 
-                  className={`flex justify-center items-center gap-2 mb-[13px] ${filterStatus === 'Active' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                  onClick={() => {
-                    if (filterStatus === 'Active') {
-                      setShowCompleted(!showCompleted);
-                    }
-                  }}
-                  title={filterStatus === 'Active' ? "Click to toggle visibility" : ""}
-                >
-                  <h2 className="text-center font-bold text-[1.5rem] text-[#c57415] dark:text-orange-400">
-                    Completed Tasks
-                  </h2>
-                  {filterStatus === 'Active' && (
-                    <span className="text-[#c57415] dark:text-orange-400 text-xl font-bold pb-1">
-                      {showCompleted ? '▲' : '▼'}
-                    </span>
-                  )}
-                </div>
-
-                {((filterStatus === 'All' || filterStatus === 'Completed') || (filterStatus === 'Active' && showCompleted)) && (
-                  <TaskTable 
-                    tasks={filteredCompletedTasks}
-                    isCompleted={true}
-                    formatDate={formatDate}
-                    getFactorClass={getFactorClass}
                     handleUndoComplete={handleUndoComplete}
                     handleToggleSubtask={handleToggleSubtask}
+                    showCompleted={showCompleted}
+                    setShowCompleted={setShowCompleted}
+                    isQuickAddOpen={isQuickAddOpen}
+                    setIsQuickAddOpen={setIsQuickAddOpen}
+                    handleQuickAdd={(title) =>
+                      handleQuickAdd({
+                        newTitle: title,
+                        recurrence,
+                        taskLinks,
+                        subtasks,
+                        generateAutoTags
+                      })
+                    }
                   />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                </TaskProvider>
+              }
+            />
 
-      {isLocallyUnlocked && (
-        <button
-          onClick={() => setIsQuickAddOpen(true)}
-          title="Quick Add Task (Ctrl+K)"
-          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 w-14 h-14 bg-[linear-gradient(135deg,#f57c00_0%,#d84315_100%)] text-white rounded-full shadow-[0_4px_16px_rgba(245,124,0,0.5)] flex items-center justify-center text-3xl z-40 transition-transform hover:scale-110 active:scale-95"
-        >
-          +
-        </button>
-      )}
+            <Route
+              path="/settings"
+              element={<Settings />}
+            />
 
-      <QuickAddModal 
-        isOpen={isQuickAddOpen} 
-        onClose={() => setIsQuickAddOpen(false)} 
-        onQuickAdd={handleQuickAdd}
-        isDarkMode={isDarkMode}
-      />
+            <Route
+              path="/analytics"
+              element={<AnalyticsPage tasks={tasks} />}
+            />
 
+            <Route
+              path="*"
+              element={<NotFound />}
+            />
+          </Routes>
+        </Suspense>
+      </ProtectedRoute>
       <Analytics />
     </div>
+    </>
   );
 }
 

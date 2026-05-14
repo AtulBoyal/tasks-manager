@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTaskContext } from '../context/TaskContext';
+
 
 function TaskTable({
   tasks,
@@ -9,8 +11,8 @@ function TaskTable({
   getFactorClass,
   handleInlineUpdate,
   handleEdit,
-  handleDelete,
   handleComplete,
+  handleDelete,
   handleUndoComplete,
   handleToggleSubtask
 }) {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { supabase } from '../supabaseClient';
+import { authService } from '../services/authService';
 
 function LoginScreen({ 
   session, 
@@ -21,8 +22,7 @@ function LoginScreen({
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    window.location.reload();
+    await authService.signOut();
   };
 
   return (
