@@ -156,7 +156,7 @@ function TaskForm({
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     if (currentSubtaskInput.trim()) {
-                      setSubtasks([...subtasks, { id: Date.now(), title: currentSubtaskInput.trim(), completed: false }]);
+                      setSubtasks([...subtasks, { title: currentSubtaskInput.trim(), completed: false }]);
                       setCurrentSubtaskInput('');
                     }
                   }
@@ -166,7 +166,7 @@ function TaskForm({
                 type="button" 
                 onClick={() => {
                   if (currentSubtaskInput.trim()) {
-                    setSubtasks([...subtasks, { id: Date.now(), title: currentSubtaskInput.trim(), completed: false }]);
+                    setSubtasks([...subtasks, { title: currentSubtaskInput.trim(), completed: false }]);
                     setCurrentSubtaskInput('');
                   }
                 }}

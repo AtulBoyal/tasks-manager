@@ -51,7 +51,7 @@ function FilterBar({
           <input 
             type={filterDate ? "date" : "text"} 
             placeholder="Select date..."
-            value={filterDate} 
+            value={filterDate || ''} 
             onChange={e => setFilterDate(e.target.value)}
             onFocus={(e) => e.target.type = 'date'}
             onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}

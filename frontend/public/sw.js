@@ -26,7 +26,9 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
+  self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+  });
 });
 
 self.addEventListener('fetch', (event) => {

@@ -129,12 +129,12 @@ function TaskTable({
                 <span className="md:hidden font-bold text-[#b06d0e] dark:text-orange-400 text-[10px] uppercase tracking-wider">Deadline</span>
                 {isCompleted ? (
                   <span className="text-sm md:text-base whitespace-nowrap">
-                    {task.last_date ? formatDate(task.last_date) : 'No Deadline'}
+                    {task.last_date ? formatDate(task.last_date || '') : 'No Deadline'}
                   </span>
                 ) : (
                   <div className="relative inline-flex items-center justify-center cursor-pointer group/date" title="Click to change date">
                     <span className="text-sm md:text-base border-b border-dashed border-gray-400 dark:border-gray-500 group-hover/date:border-[#c57415] dark:group-hover/date:border-orange-400 group-hover/date:text-[#c57415] dark:group-hover/date:text-orange-400 transition-colors whitespace-nowrap">
-                      {task.last_date ? formatDate(task.last_date) : 'No Deadline'}
+                      {task.last_date ? formatDate(task.last_date || '') : 'No Deadline'}
                     </span>
                     <input
                       type="date"
@@ -160,12 +160,20 @@ function TaskTable({
             {/* ACTIONS */}
             <td className={`${tdStyles} block w-full md:w-auto md:table-cell pt-2 md:pt-[10px] mt-1 md:mt-0 border-t border-orange-50 dark:border-slate-700 md:border-none`}>
               {isCompleted ? (
-                <button className="w-full md:w-auto bg-orange-50 dark:bg-slate-700/50 md:bg-transparent border-none text-[1.15em] cursor-pointer py-[4px] px-[12px] md:px-[5px] text-[#f89c0e] hover:text-[#d37800] dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2" onClick={() => handleUndoComplete(task)} title="Mark as Incomplete">
+                <button 
+                className="w-full md:w-auto bg-orange-50 dark:bg-slate-700/50 md:bg-transparent border-none text-[1.15em] cursor-pointer py-[4px] px-[12px] md:px-[5px] text-[#f89c0e] hover:text-[#d37800] dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2" 
+                onClick={() => handleUndoComplete(task)} 
+                title="Mark as Incomplete">
                   ↩️ <span className="md:hidden text-sm font-bold">Undo Complete</span>
                 </button>
               ) : (
-                <div className="flex gap-[8px] md:gap-[10px] justify-between md:justify-center bg-orange-50/30 dark:bg-slate-700/30 md:bg-transparent px-2 py-1 rounded-lg">
-                  <button className="flex-1 md:flex-none bg-white md:bg-transparent border border-orange-100 md:border-none shadow-sm md:shadow-none text-[#065fd4] dark:text-blue-400 text-[1.2em] md:text-[1.15em] cursor-pointer py-[4px] md:py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe] dark:hover:bg-slate-600 dark:bg-slate-700 dark:border-slate-600" onClick={() => handleEdit(task)} title="Full Edit">✏️</button>
+                <div 
+                className="flex gap-[8px] md:gap-[10px] justify-between md:justify-center bg-orange-50/30 dark:bg-slate-700/30 md:bg-transparent px-2 py-1 rounded-lg">
+                  <button 
+                  className="flex-1 md:flex-none bg-white md:bg-transparent border border-orange-100 md:border-none shadow-sm md:shadow-none text-[#065fd4] dark:text-blue-400 text-[1.2em] md:text-[1.15em] cursor-pointer py-[4px] md:py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#004bb8] hover:bg-[#e8f0fe] dark:hover:bg-slate-600 dark:bg-slate-700 dark:border-slate-600" 
+                  onClick={() => handleEdit(task)} 
+                  title="Full Edit">✏️</button>
+
                   <button className="flex-1 md:flex-none bg-white md:bg-transparent border border-red-100 md:border-none shadow-sm md:shadow-none text-[#e34d4d] text-[1.2em] cursor-pointer py-[4px] md:py-[3px] px-[6px] transition-colors rounded-[6px] hover:text-[#be2323] hover:bg-[#fff0f0] dark:hover:bg-slate-600 dark:bg-slate-700 dark:border-slate-600" onClick={() => handleDelete(task.id)} title="Delete">🗑️</button>
                   <button className="flex-[2] md:flex-none bg-[#e8f5e9] md:bg-transparent border border-green-200 md:border-none shadow-sm md:shadow-none text-[#2e7d32] dark:text-green-500 text-[1.2em] md:text-[1.25em] cursor-pointer py-[4px] md:py-[3px] px-[5px] transition-colors rounded-[6px] hover:text-[#0d540d] hover:bg-[#c8e6c9] dark:hover:bg-slate-600 dark:bg-green-900/40 dark:border-green-800" onClick={() => handleComplete(task)} title="Mark as Complete">
                     ✔️ <span className="md:hidden text-sm font-bold ml-1">Done</span>

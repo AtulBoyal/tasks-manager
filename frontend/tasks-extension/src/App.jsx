@@ -5,7 +5,7 @@ import { generateAutoTags } from './tagEngine'; // ✨ Import your engine
 function App() {
   const [taskName, setTaskName] = useState('');
   const [factor, setFactor] = useState('Normal');
-  const [lastDate, setLastDate] = useState('');
+  const [lastDate, setLastDate] = useState(null);
   const [link, setLink] = useState('');
   const [tags, setTags] = useState(''); // Manual tags input
   
@@ -34,7 +34,7 @@ function App() {
     const finalTags = generateAutoTags(cleanName, manualTags);
 
     const newTask = {
-      id: Date.now(),
+      // id: Date.now(),
       name: cleanName,
       factor: factor,
       last_date: lastDate || null,
@@ -46,7 +46,11 @@ function App() {
     };
 
     try {
-      await supabase.from('tasks').insert([newTask]);
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([newTask])
+        .select()
+        .single();
       window.close(); 
     } catch (error) {
       console.error("Failed to save:", error);
@@ -90,7 +94,7 @@ function App() {
 
           <input 
             type="date"
-            value={lastDate}
+            value={lastDate || ''}
             onChange={(e) => setLastDate(e.target.value)}
             className="w-1/2 px-2 py-1.5 rounded-md bg-slate-800 border border-slate-700 focus:outline-none focus:border-orange-500 text-xs text-slate-200"
             disabled={isSaving}

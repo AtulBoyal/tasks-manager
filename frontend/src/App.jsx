@@ -10,6 +10,7 @@ import ConsistencyHeatmap from './components/ConsistencyHeatmap';
 import QuickAddModal from './components/QuickAddModal';
 import { supabase } from './supabaseClient';
 import { generateAutoTags } from './utils/tagEngine';
+import { createTask, updateTask, deleteTask } from './services/taskService';
 
 // ============================================================================
 // WEBAUTHN UTILITY FUNCTIONS
@@ -131,7 +132,7 @@ function App() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFactor, setFilterFactor] = useState('All');
-  const [filterDate, setFilterDate] = useState(''); 
+  const [filterDate, setFilterDate] = useState(null); 
   const [filterStatus, setFilterStatus] = useState('Active'); 
   const [showCompleted, setShowCompleted] = useState(false);  
 
@@ -166,22 +167,31 @@ function App() {
 
   const todayDate = new Date().toISOString().split('T')[0];
 
-  const handleQuickAdd = (newTitle) => {
+  const handleQuickAdd = async (newTitle) => {
     const smartTags = generateAutoTags(newTitle, []);
+
     const newTask = {
       id: Date.now(),
       user_id: session.user.id,
-      name: newTitle,
-      factor: 'Normal',
-      last_date: todayDate,
-      start_date: null,
+      name: newTitle.trim(),
+      factor: factor || 'Normal',
+      last_date: lastDate || null,
+      start_date: startDate || null,
       completed: false,
-      recurrence: 'none',
-      links: [],
-      tags: smartTags, 
-      subtasks: []
+      completion_date: null,
+      recurrence: recurrence || 'none',
+      links: Array.isArray(taskLinks) ? taskLinks : [],
+      tags: Array.isArray(smartTags) ? smartTags : [],
+      subtasks: Array.isArray(subtasks) ? subtasks : []
     };
-    updateLocalTasks([...tasks, newTask]);
+
+    try {
+      const createdTask = await createTask(newTask);
+
+      setTasks(prev => [...prev, createdTask]);
+    } catch (error) {
+      console.error("Quick add failed:", error);
+    }
   };
 
   useEffect(() => {
@@ -346,9 +356,9 @@ function App() {
       
       const resetTasks = tasks.map(t => {
         if (t.completed && t.recurrence && t.recurrence !== 'none') {
-          const compDate = t.completion_date ? t.completion_date.split('T')[0] : '';
+          const compDate = t.completion_date ? t.completion_date.split('T')[0] : null;
           
-          if (compDate !== todayStr && compDate !== '') {
+          if (compDate !== todayStr && compDate !== null) {
             needsUpdate = true;
             
             let newDeadline = t.last_date ? new Date(t.last_date) : null;
@@ -369,8 +379,8 @@ function App() {
               ...t, 
               completed: false, 
               completion_date: null,
-              last_date: newDeadline ? newDeadline.toISOString().split('T')[0] : '',
-              start_date: newStartDate ? newStartDate.toISOString().split('T')[0] : '',
+              last_date: newDeadline ? newDeadline.toISOString().split('T')[0] : null,
+              start_date: newStartDate ? newStartDate.toISOString().split('T')[0] : null,
               subtasks: t.subtasks ? t.subtasks.map(st => ({...st, completed: false})) : []
             };
           }
@@ -463,16 +473,30 @@ function App() {
   };
 
   const updateLocalTasks = async (newTasks) => {
+    // const sanitizedTasks = newTasks.map(task => ({
+    //   ...task,
+    //   start_date: task.start_date || null,
+    //   last_date: task.last_date || null,
+    // }));
+
+    // console.log(
+    //   "TASKS BEING SAVED:",
+    //   sanitizedTasks.map(t => ({
+    //     id: t.id,
+    //     user_id: t.user_id,
+    //     name: t.name
+    //   }))
+    // );
     // 1. Optimistic UI update
     setTasks(newTasks);
 
     // 2. Pure Cloud Sync
-    try {
-      await apiStorage.saveTasks(newTasks);
-    } catch (error) {
-      console.error("Cloud sync failed.", error);
-      alert(`Database Error: ${error.message}`);
-    }
+    // try {
+    //   await apiStorage.saveTasks(sanitizedTasks);
+    // } catch (error) {
+    //   console.error("Cloud sync failed.", error);
+    //   alert(`Database Error: ${error.message}`);
+    // }
   };
 
   const handleInlineUpdate = (taskId, field, value) => {
@@ -487,7 +511,7 @@ function App() {
     setCurrentTagInput('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const cleanTaskName = taskName.trim();
@@ -514,37 +538,157 @@ function App() {
         } : t
       );
     } else {
-      updatedTasks = [...tasks, { 
-        id: Date.now(), 
+      const newTask = {
+        id: Date.now(),
         user_id: session.user.id,
         name: cleanTaskName,
-        factor, 
-        last_date: lastDate || null, 
-        start_date: startDate || null, 
-        completed: false, 
-        links: taskLinks, 
-        tags: smartTags, 
-        subtasks: subtasks, 
-        recurrence: recurrence 
-      }];
+        factor: factor || 'Normal',
+        last_date: lastDate || null,
+        start_date: startDate || null,
+        completed: false,
+        completion_date: null,
+        recurrence: recurrence || 'none',
+        links: Array.isArray(taskLinks) ? taskLinks : [],
+        tags: Array.isArray(smartTags) ? smartTags : [],
+        subtasks: Array.isArray(subtasks) ? subtasks : []
+      };
+
+      try {
+        const createdTask = await createTask(newTask);
+
+        setTasks(prev => [...prev, createdTask]);
+      } catch (error) {
+        console.error("Failed to create task:", error);
+      }
+
+      setTaskName('');
+      setFactor('Normal');
+      setLastDate('');
+      setStartDate('');
+      setTaskLinks([]);
+      setTaskTags([]);
+      setSubtasks([]);
+      setRecurrence('none');
+      setEditingTaskId(null);
+
+      return;
     }
     
     updateLocalTasks(updatedTasks);
     
-    setTaskName(''); setFactor('Normal'); setLastDate(''); setStartDate(''); setTaskLinks([]); setTaskTags([]); setSubtasks([]); setRecurrence('none'); setEditingTaskId(null);
+    setTaskName('');
+    setFactor('Normal');
+    setLastDate('');
+    setStartDate('');
+    setTaskLinks([]);
+    setTaskTags([]);
+    setSubtasks([]);
+    setRecurrence('none');
+    setEditingTaskId(null);
   };
 
-  const handleDelete = (id) => updateLocalTasks(tasks.filter(t => t.id !== id));
-  const handleComplete = (task) => updateLocalTasks(tasks.map(t => t.id === task.id ? { ...t, completed: true, completion_date: new Date().toISOString() } : t));
-  const handleUndoComplete = (task) => updateLocalTasks(tasks.map(t => t.id === task.id ? { ...t, completed: false, completion_date: null } : t));
+  const handleDelete = async (id) => {
+    const previousTasks = tasks;
+
+    try {
+      // Optimistic delete
+      setTasks(prev => prev.filter(t => t.id !== id));
+
+      await deleteTask(id);
+
+    } catch (error) {
+      console.error("Delete failed:", error);
+
+      // Rollback
+      setTasks(previousTasks);
+    }
+  };
+
+  const handleComplete = async (task) => {
+    try {
+      // Optimistic UI
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === task.id
+            ? {
+                ...t,
+                completed: true,
+                completion_date: new Date().toISOString()
+              }
+            : t
+        )
+      );
+
+      // Database update
+      await updateTask(task.id, {
+        completed: true,
+        completion_date: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("Failed to complete task:", error);
+
+      // Rollback UI
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === task.id
+            ? {
+                ...t,
+                completed: false,
+                completion_date: null
+              }
+            : t
+        )
+      );
+    }
+  };
+
+  const handleUndoComplete = async (task) => {
+    try {
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === task.id
+            ? {
+                ...t,
+                completed: false,
+                completion_date: null
+              }
+            : t
+        )
+      );
+
+      await updateTask(task.id, {
+        completed: false,
+        completion_date: null
+      });
+
+    } catch (error) {
+      console.error("Failed to undo completion:", error);
+
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === task.id
+            ? {
+                ...t,
+                completed: true,
+                completion_date: task.completion_date
+              }
+            : t
+        )
+      );
+    }
+  };
 
   const handleEdit = (task) => {
-    setTaskName(task.name); setFactor(task.factor); 
+    setEditingTaskId(task.id);
+    setTaskName(task.name || '');
+    setFactor(task.factor || 'Normal'); 
     setLastDate(task.last_date || ''); 
     setStartDate(task.start_date || '');
-    setTaskLinks(task.links || []); setTaskTags(task.tags || []); setSubtasks(task.subtasks || []); 
+    setTaskLinks(task.links || []);
+    setTaskTags(task.tags || []);
+    setSubtasks(task.subtasks || []); 
     setRecurrence(task.recurrence || 'none');
-    setEditingTaskId(task.id);
   };
 
   const formatDate = (isoDate) => {
@@ -627,7 +771,7 @@ function App() {
               setTaskName={setTaskName}
               factor={factor} 
               setFactor={setFactor}
-              lastDate={lastDate} 
+              lastDate={lastDate || ''} 
               setLastDate={setLastDate} 
               todayDate={todayDate}
               currentTagInput={currentTagInput} 
