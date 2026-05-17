@@ -4,3 +4,6 @@ __pycache__
 *.env
 TasksManager_ Architecture&DeveloperHandover.txt
 Tasksmanager Refactor Plan V1 Master Blueprint.pdf
+build
+node_modules
+dist

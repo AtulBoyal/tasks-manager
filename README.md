@@ -1,98 +1,261 @@
-# TaskManager
+# TaskVault
 
-Hi! I’m **Atul Boyal**, and I’m thrilled to introduce **TaskManager** — a website platform designed to ensure you never forget another deadline or important task!  
-Whether it’s a critical meeting, an upcoming interview, or a hackathon, TaskManager helps you organize, track, and complete your work with ease.
+A modern full-stack productivity and task management platform built with React, Supabase, and real-time synchronization.
+
+TaskVault is designed for high-performance personal productivity with features like recurring habits, smart task organization, realtime sync, biometric vault locking, analytics, consistency tracking, and responsive cross-device experience.
+
+---
+
+## 🚀 Live Demo
+
+```bash
+https://tasks-manager-coral.vercel.app/
+```
+
+---
 
 ## ✨ Features
 
-- **Add, edit, and delete tasks** with details like difficulty and deadlines
-- **Mark tasks as completed** and see when you finished them
-- **Automatic sorting** so urgent & easy tasks come first
-- **Visual cues** for deadlines approaching today
-- **Modern, user-friendly design**
-- *More improvements & new features coming soon!*
+### Core Productivity
 
-## 🚀 Quick Start
+* Create, edit, delete, and organize tasks
+* Priority management (Urgent / Normal / Later)
+* Deadlines and completion tracking
+* Inline task editing
+* Smart filtering and searching
+* Quick Add modal (keyboard shortcut powered)
 
-**1. Clone the Repository:**
+### Advanced Task Management
 
-```
-git clone https://github.com/AtulBoyal/Tasks_Manager.git
-```
-```
-cd Tasks_Manager
+* Recurring daily habits
+* Subtasks support
+* Smart auto-generated tags
+* Task links and resources
+* Completion history tracking
+* Archive-ready architecture
+
+### Realtime & Sync
+
+* Realtime synchronization using Supabase Realtime
+* Optimistic UI updates
+* Instant cross-session updates
+* Protected vault-style unlocking
+
+### Security
+
+* Local vault PIN protection
+* Biometric authentication support
+* Session-based protection routes
+
+### UI / UX
+
+* Fully responsive UI
+* Dark mode support
+* Modern glassmorphism-inspired interface
+* Mobile optimized interactions
+* Keyboard shortcuts
+* Toast notifications
+
+### Analytics & Consistency
+
+* Productivity heatmap
+* Habit consistency visualization
+* Analytics-ready routing architecture
+
+### Developer Experience
+
+* Modular architecture
+* Custom React hooks
+* Context API integration
+* Reusable UI components
+* Lazy-loaded routes
+* Automated testing setup
+
+---
+
+# 🧪 Testing
+
+This project includes automated testing using:
+
+* Vitest
+* React Testing Library
+
+### Current Test Coverage
+
+* Component testing
+* Hook testing
+* Route protection testing
+* Utility testing
+
+Run tests:
+
+```bash
+npm run test
 ```
 
-**2. Start the Backend:**
+---
 
-```
-cd backend
-```
-```
-python3 -m venv venv
-```
-```
-source venv/bin/activate
-```
-```
-pip install -r requirements.txt   # (Only if you haven't already)
-```
-```
-python3 manage.py migrate
-```
-```
-python3 manage.py runserver
+# 🛠️ Tech Stack
+
+## Frontend
+
+* React
+* React Router
+* Tailwind CSS
+* React Hot Toast
+
+## Backend / Database
+
+* Supabase
+* PostgreSQL
+* Supabase Realtime
+
+## Testing
+
+* Vitest
+* React Testing Library
+
+## Deployment
+
+* Vercel
+
+---
+
+# 📁 Project Structure
+
+```bash
+src/
+│
+├── components/
+├── pages/
+├── hooks/
+├── context/
+├── layouts/
+├── routes/
+├── services/
+├── tests/
+├── utils/
+└── ui/
 ```
 
-**3. Start the Frontend:**
+---
 
+# ⚙️ Installation & Setup
+
+## 1. Clone Repository
+
+```bash
+git clone https://github.com/AtulBoyal/Tasks_Manager
+cd Tasks_Manager/frontend
 ```
-cd ../frontend
+
+## 2. Install Dependencies
+
+```bash
+npm install
 ```
+
+## 3. Configure Environment Variables
+
+Create a `.env` file:
+
+```env
+REACT_APP_SUPABASE_URL=your_supabase_url
+REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
-npm install    # Only needed once
-```
-```
+
+---
+
+# ▶️ Run Locally
+
+```bash
 npm start
 ```
 
-- Open [http://localhost:3000](http://localhost:3000) to view in your browser.
-- Leave the backend running in a separate terminal.
+---
 
-## 🛠️ Development Scripts
+# 🏗️ Build Production Version
 
-- **Backend:**
-  - Activate the virtual environment:
+```bash
+npm run build
+```
 
-    ```
-    source venv/bin/activate
-    ```
-  - Start the server:
+---
 
-    ```
-    python3 manage.py runserver
-    ```
-- **Frontend:**
-  - Start React dev server:
+# 🧪 Run Tests
 
-    ```
-    npm start
-    ```
-- All changes will auto-reload in development.
+```bash
+npm run test
+```
 
-## 💡 About the Project
+---
 
-TaskManager was born from the personal need to track deadlines and manage tasks efficiently.  
-With features to **add, edit, complete, and review** your work, it’s your digital assistant for productivity.
+# 📸 Screenshots
 
-- I’m continuously innovating and adding new features — so stay tuned and feel free to contribute or suggest improvements!
+* Dashboard
+* Dark Mode
+* Light Mode
+* Mobile UI
+* Heatmap
+* Quick Add Modal
 
-## 🤝 Contributing & Feedback
+Example:
 
-- I’m always open to feedback and new ideas to make TaskManager even better.
-- For suggestions, feature requests, or bug reports, please open an [issue](https://github.com/AtulBoyal/Tasks_Manager/issues) or submit a pull request.
+```md
+![Dashboard](./frontend/public/screenshots/dashboard.png)
+![Dark Mode](./frontend/public/screenshots/dark-mode.png)
+![Light Mode](./frontend/public/screenshots/light-mode.png)
+![Mobile UI](./frontend/public/screenshots/mobile-ui.png)
+![Heatmap](./frontend/public/screenshots/heatmap.png)
+![Quick Add Model](./frontend/public/screenshots/quick-add.png)
+```
 
-## 🧑‍💻 License
+---
 
-Thank you for your interest and support.  
-**Hope you enjoy using TaskManager and find it as useful as I do! 💙**
+# 🧠 Engineering Highlights
+
+* Optimistic state management
+* Realtime subscriptions
+* Modular scalable architecture
+* Context-driven shared state
+* Custom hooks abstraction
+* Protected route architecture
+* Production-ready component separation
+* Mobile-first responsive design
+
+---
+
+# 🔒 Security Notes
+
+Environment variables are excluded using `.gitignore`.
+
+No sensitive credentials are committed to the repository.
+
+---
+
+# 📌 Future Improvements
+
+* AI-powered task suggestions
+* Calendar integration
+* Team collaboration
+* Drag-and-drop kanban
+* Offline support
+* PWA support
+* Notifications & reminders
+* Advanced analytics dashboard
+
+---
+
+# 👨‍💻 Author
+
+Atul Boyal
+
+* IIT Hyderabad
+* Full Stack Developer
+* Systems & Product Engineering Enthusiast
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
