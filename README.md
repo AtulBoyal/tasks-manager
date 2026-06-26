@@ -8,94 +8,100 @@ TaskVault is designed for high-performance personal productivity with features l
 
 ## 🚀 Live Demo
 
-```bash
 https://tasks-manager-coral.vercel.app/
-```
 
 ---
 
-## ✨ Features
+# Overview
 
-### Core Productivity
+TaskVault is a modern productivity platform focused on speed, security and user experience.
 
-* Create, edit, delete, and organize tasks
+Unlike traditional todo applications, TaskVault combines intelligent task management with real-time cloud synchronization, analytics, recurring habits, biometric vault protection and a polished responsive interface.
+
+Designed with a modular architecture, the project emphasizes scalability, maintainability and production-ready engineering practices.
+
+---
+
+# Features
+
+## Productivity
+
+* Create, edit and delete tasks
 * Priority management (Urgent / Normal / Later)
-* Deadlines and completion tracking
-* Inline task editing
-* Smart filtering and searching
-* Quick Add modal (keyboard shortcut powered)
+* Deadlines and due-date tracking
+* Start dates
+* Inline editing
+* Archive & restore tasks
+* Task completion history
+* Powerful search and filters
 
-### Advanced Task Management
+---
 
-* Recurring daily habits
-* Subtasks support
-* Smart auto-generated tags
-* Task links and resources
-* Completion history tracking
-* Archive-ready architecture
+## Smart Task Management
 
-### Realtime & Sync
+* Automatic tag generation
+* Custom tags
+* Subtasks
+* Resource links
+* Recurring daily tasks
+* Quick Add (keyboard shortcut)
+* Task prioritization
 
-* Realtime synchronization using Supabase Realtime
+---
+
+## Codeforces Integration
+
+* Automatic Codeforces contest synchronization
+* User-controlled contest sync
+* Duplicate contest prevention
+* Contest reminders with subtasks
+* Contest registration links
+
+---
+
+## Analytics
+
+* Productivity dashboard
+* Completion statistics
+* Consistency heatmap
+* Daily productivity insights
+* Archive analytics support
+
+---
+
+## Security
+
+* Local Vault PIN
+* Biometric authentication
+* Protected application routes
+* Secure Supabase authentication
+* Device-local encrypted vault
+
+---
+
+## Realtime
+
+* Supabase Realtime
+* Instant synchronization
 * Optimistic UI updates
-* Instant cross-session updates
-* Protected vault-style unlocking
+* Multi-device synchronization
 
-### Security
+---
 
-* Local vault PIN protection
-* Biometric authentication support
-* Session-based protection routes
+## User Experience
 
-### UI / UX
-
-* Fully responsive UI
-* Dark mode support
-* Modern glassmorphism-inspired interface
-* Mobile optimized interactions
-* Keyboard shortcuts
+* Beautiful responsive UI
+* Dark Mode
+* Light Mode
+* Mobile friendly
 * Toast notifications
-
-### Analytics & Consistency
-
-* Productivity heatmap
-* Habit consistency visualization
-* Analytics-ready routing architecture
-
-### Developer Experience
-
-* Modular architecture
-* Custom React hooks
-* Context API integration
-* Reusable UI components
-* Lazy-loaded routes
-* Automated testing setup
+* Keyboard shortcuts
+* Smooth animations
+* Lazy loaded pages
 
 ---
 
-# 🧪 Testing
-
-This project includes automated testing using:
-
-* Vitest
-* React Testing Library
-
-### Current Test Coverage
-
-* Component testing
-* Hook testing
-* Route protection testing
-* Utility testing
-
-Run tests:
-
-```bash
-npm run test
-```
-
----
-
-# 🛠️ Tech Stack
+# Tech Stack
 
 ## Frontend
 
@@ -104,24 +110,25 @@ npm run test
 * Tailwind CSS
 * React Hot Toast
 
-## Backend / Database
+## Backend
 
 * Supabase
 * PostgreSQL
+* Supabase Authentication
 * Supabase Realtime
+
+## Deployment
+
+* Vercel
 
 ## Testing
 
 * Vitest
 * React Testing Library
 
-## Deployment
-
-* Vercel
-
 ---
 
-# 📁 Project Structure
+# Architecture
 
 ```bash
 src/
@@ -138,124 +145,147 @@ src/
 └── ui/
 ```
 
+Project follows a modular architecture with:
+
+* Custom Hooks
+* Context API
+* Service Layer
+* Protected Routes
+* Reusable Components
+* Lazy Loading
+* Separation of Concerns
+
 ---
 
-# ⚙️ Installation & Setup
+# Installation
 
-## 1. Clone Repository
+Clone repository
 
 ```bash
-git clone https://github.com/AtulBoyal/Tasks_Manager
+git clone https://github.com/AtulBoyal/tasks-manager.git
+```
+
+Move into frontend
+
+```bash
 cd Tasks_Manager/frontend
 ```
 
-## 2. Install Dependencies
+Install dependencies
 
 ```bash
 npm install
 ```
 
-## 3. Configure Environment Variables
-
-Create a `.env` file:
+Create a `.env` file
 
 ```env
-REACT_APP_SUPABASE_URL=your_supabase_url
-REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+REACT_APP_SUPABASE_URL=YOUR_SUPABASE_URL
+REACT_APP_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
----
-
-# ▶️ Run Locally
+Run locally
 
 ```bash
 npm start
 ```
 
----
-
-# 🏗️ Build Production Version
+Build production version
 
 ```bash
 npm run build
 ```
 
----
-
-# 🧪 Run Tests
+Run tests
 
 ```bash
-npm run test
+npm test
 ```
 
 ---
 
-# 📸 Screenshots
+# Screenshots
 
 * Dashboard
 * Dark Mode
-* Light Mode
-* Mobile UI
-* Heatmap
-* Quick Add Modal
-
-Example:
+* Analytics
+* Mobile View
+* Archive
+* Settings
+* Vault Lock
+* Focus Mode
 
 ```md
 ![Dashboard](./frontend/public/screenshots/dashboard.png)
 ![Dark Mode](./frontend/public/screenshots/dark-mode.png)
-![Light Mode](./frontend/public/screenshots/light-mode.png)
+![Analytics](./frontend/public/screenshots/analytics.png)
 ![Mobile UI](./frontend/public/screenshots/mobile-ui.png)
-![Heatmap](./frontend/public/screenshots/heatmap.png)
-![Quick Add Model](./frontend/public/screenshots/quick-add.png)
+![Archive](./frontend/public/screenshots/archive.png)
+![Settings](./frontend/public/screenshots/settings.png)
+![Vault Lock](./frontend/public/screenshots/vault-lock.png)
+![Focus Mode](./frontend/public/screenshots/focus-mode.png)
 ```
 
 ---
 
-# 🧠 Engineering Highlights
+# Engineering Highlights
 
-* Optimistic state management
-* Realtime subscriptions
-* Modular scalable architecture
-* Context-driven shared state
+* Modular React architecture
+* Production-ready folder structure
+* Optimistic UI updates
+* Real-time synchronization
+* Context-driven state management
 * Custom hooks abstraction
+* Lazy loading
+* Responsive design
 * Protected route architecture
-* Production-ready component separation
-* Mobile-first responsive design
+* Device-local Vault security
+* Automatic recurring task engine
+* Codeforces contest synchronization
+* Automatic duplicate prevention
 
 ---
 
-# 🔒 Security Notes
+# Future Roadmap
 
-Environment variables are excluded using `.gitignore`.
-
-No sensitive credentials are committed to the repository.
-
----
-
-# 📌 Future Improvements
-
-* AI-powered task suggestions
-* Calendar integration
+* AI task prioritization
+* AI schedule planning
+* Google Calendar integration
+* Outlook integration
 * Team collaboration
-* Drag-and-drop kanban
-* Offline support
-* PWA support
-* Notifications & reminders
-* Advanced analytics dashboard
+* Shared workspaces
+* Kanban board
+* Offline mode
+* PWA
+* Push notifications
+* Email reminders
+* Drag & Drop support
+* Natural language task creation
+* AI productivity insights
 
 ---
 
-# 👨‍💻 Author
+# Security
 
-Atul Boyal
+* Sensitive credentials are excluded using `.gitignore`.
+* Authentication is handled through Supabase.
+* Vault PIN remains device-local and is never uploaded to the server.
+* Environment variables are never committed.
+
+---
+
+# Author
+
+**Atul Boyal**
 
 * IIT Hyderabad
+* Computer Science & Engineering
 * Full Stack Developer
-* Systems & Product Engineering Enthusiast
+* Systems Programming Enthusiast
+* Competitive Programmer
 
 ---
 
-# 📄 License
+# License
 
 This project is licensed under the MIT License.
