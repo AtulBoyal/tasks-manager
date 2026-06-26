@@ -18,7 +18,7 @@ import { useBiometrics } from './hooks/useBiometrics';
 import { useTaskActions } from './hooks/useTaskActions';
 import { useTaskForm } from './hooks/useTaskForm';
 import { useProfile } from './hooks/useProfile';
-import { taskService } from './services/taskService';
+// import { taskService } from './services/taskService';
 import ResetPinModal from './components/ResetPinModal';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -135,10 +135,10 @@ function App() {
 
             for (const [index, contest] of upcoming.entries()) {
               const contestName = `🏆 CF: ${contest.name}`;
-              const alreadyExists = contestExists(contest.id);
+              const alreadyExists = await contestExists(contest.id);
 
-                if (alreadyExists)
-                    continue;
+              if (alreadyExists)
+                  continue;
 
               if (!alreadyExists) {
                 const contestDateObj = new Date(contest.startTimeSeconds * 1000);
@@ -158,7 +158,7 @@ function App() {
                   links: [
                     {
                       title: 'Registration / Contest Page',
-                      url: 'https://codeforces.com/contests/${contest.id}'
+                      url: `https://codeforces.com/contests/${contest.id}`
                     }
                   ],
                   tags: ['codeforces', 'contest'],
@@ -190,7 +190,7 @@ function App() {
     };
 
     fetchContests();
-  }, [isLocallyUnlocked, tasks, addTask]);
+  }, [isLocallyUnlocked, tasks.length, addTask, contestExists, session?.user?.id]);
 
   const handleAddTag = (e) => {
     e.preventDefault();
