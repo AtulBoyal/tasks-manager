@@ -24,6 +24,33 @@ export const useTaskActions = ({
     }
   };
 
+  const handleArchive = async (task) => {
+    try {
+      await editTask(task.id, {
+          archived: true
+      });
+
+      toast.success("Task archived");
+    }
+    catch(error){
+      console.error("Archive failed:", error);
+      toast.error("Failed to archive");
+    }
+  }
+
+  const handleRestore = async (task) => {
+    try {
+      await editTask(task.id, {
+        archived: false
+      });
+
+      toast.success("Task restored");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to restore task");
+    }
+  };
+
   const handleComplete = async (task) => {
     try {
       setTasks(prev =>
@@ -165,6 +192,8 @@ export const useTaskActions = ({
     handleUndoComplete,
     handleInlineUpdate,
     handleToggleSubtask,
-    handleQuickAdd
+    handleQuickAdd,
+    handleArchive,
+    handleRestore
   };
 };

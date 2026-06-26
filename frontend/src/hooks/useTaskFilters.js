@@ -10,7 +10,7 @@ export const useTaskFilters = ({
 
   const filteredActiveTasks = tasks
     .filter(task => {
-      if (task.completed) return false;
+      if (task.completed || task.archived) return false;
 
       if (task.start_date && task.start_date > currentDateStr)
         return false;
@@ -70,7 +70,7 @@ export const useTaskFilters = ({
 
   const filteredCompletedTasks = tasks
     .filter(task => {
-      if (!task.completed) return false;
+      if (!task.completed || task.archived) return false;
 
       if (
         searchQuery &&

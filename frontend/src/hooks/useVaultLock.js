@@ -2,19 +2,37 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 
 // export const useVaultLock = (fetchTasks, session) => {
-export const useVaultLock = () => {
-  const [isLocallyUnlocked, setIsLocallyUnlocked] = useState(false);
-  const [enteredPassword, setEnteredPassword] = useState('');
+  export const useVaultLock = (session) => {
+    const [isLocallyUnlocked, setIsLocallyUnlocked] = useState(false);
+    const [enteredPassword, setEnteredPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleUnlock = async (pwd) => {
+    if (!pwd.trim()) {
+      toast.error("PIN cannot be empty");
+      return;
+    }
+    
     setIsLoading(true);
+    
+    try {  
+      if(!session?.user?.id) return;
 
-    try {
-      const savedPin = localStorage.getItem('app_pin');
+      
+      const pinKey = `app_pin_${session.user.id}`;
+
+      const legacyPin = localStorage.getItem('app_pin');
+
+      if (legacyPin && !localStorage.getItem(pinKey)) {
+        localStorage.setItem(pinKey, legacyPin);
+        localStorage.removeItem('app_pin');
+      }
+
+      const savedPin = localStorage.getItem(pinKey);
+
 
       if (!savedPin) {
-        localStorage.setItem('app_pin', pwd);
+        localStorage.setItem(pinKey, pwd);
         setIsLocallyUnlocked(true);
         toast.success("Vault unlocked!");
       } else if (pwd === savedPin) {

@@ -10,7 +10,8 @@ export default function ProtectedRoute({
   hasBiometricSetup,
   loginWithBiometrics,
   setupBiometrics,
-  children
+  children,
+  handleForgotPin
 }) {
   if (!isLocallyUnlocked) {
     return (
@@ -23,6 +24,7 @@ export default function ProtectedRoute({
         hasBiometricSetup={hasBiometricSetup}
         loginWithBiometrics={loginWithBiometrics}
         setupBiometrics={setupBiometrics}
+        onForgotPin={handleForgotPin}
       />
     );
   }

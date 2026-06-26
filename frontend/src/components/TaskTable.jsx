@@ -12,7 +12,10 @@ function TaskTable({
   handleComplete,
   handleDelete,
   handleUndoComplete,
-  handleToggleSubtask
+  handleArchive,
+  handleRestore,
+  handleToggleSubtask,
+  isArchivePage = false
 }) {
   const thStyles = "py-[10px] px-[9px] bg-[#ffe6ba] dark:bg-slate-800 text-[#b06d0e] dark:text-orange-400 text-[15.5px] font-[750] border-b-[2px] border-b-[#ffd59e] dark:border-b-slate-700 last:pr-0";
   const tdStyles = "block md:table-cell py-1.5 md:py-[10px] px-0 md:px-[8px] border-b border-orange-50/50 dark:border-slate-700/50 md:border-b-[1.2px] last:border-0 md:group-last:border-b-0 text-black dark:text-slate-200 text-left md:text-center";
@@ -32,14 +35,19 @@ function TaskTable({
       <tbody className="block md:table-row-group">
         {tasks.length === 0 &&(
           <tr className="block md:table-row">
-            <td colSpan={isCompleted ? "6" : "5"} className="block md:table-cell py-[20px] px-[8px] text-center dark:text-slate-400">
-              No matching {isCompleted ? 'completed' : 'active'} tasks found.
+            <td
+              colSpan={isCompleted ? "6" : "5"}
+              className="block md:table-cell py-[20px] px-[8px] text-center dark:text-slate-400"
+            >
+              {isArchivePage
+                ? "📦 No archived tasks yet."
+                : `No matching ${isCompleted ? "completed" : "active"} tasks found.`}
             </td>
           </tr>     
         )}
         {tasks.map((task, idx) => {
           
-          const isTarget = !isCompleted && task.last_date === targetDate;
+          const isTarget = !isCompleted && !isArchivePage && task.last_date === targetDate;
           const highlightClasses = isTarget
             ? "ring-2 ring-inset ring-orange-400 dark:ring-orange-500 bg-orange-50/80 dark:bg-slate-700/80 shadow-md md:shadow-none"
             : "border border-orange-100 dark:border-slate-700 md:border-none bg-white dark:bg-slate-800 md:bg-transparent shadow-sm md:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700";
@@ -88,6 +96,7 @@ function TaskTable({
                     <label key={st.id} className={`flex items-start gap-2 cursor-pointer group/st ${isCompleted ? 'opacity-60' : ''}`}>
                       <input 
                         type="checkbox" 
+                        disabled={isArchivePage}
                         checked={st.completed} 
                         onChange={() => handleToggleSubtask(task.id, st.id)}
                         className="w-4 h-4 accent-orange-500 cursor-pointer mt-0.5" 
@@ -160,12 +169,45 @@ function TaskTable({
             {/* ACTIONS */}
             <td className={`${tdStyles} block w-full md:w-auto md:table-cell pt-2 md:pt-[10px] mt-1 md:mt-0 border-t border-orange-50 dark:border-slate-700 md:border-none`}>
               {isCompleted ? (
-                <button 
-                className="w-full md:w-auto bg-orange-50 dark:bg-slate-700/50 md:bg-transparent border-none text-[1.15em] cursor-pointer py-[4px] px-[12px] md:px-[5px] text-[#f89c0e] hover:text-[#d37800] dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2" 
-                onClick={() => handleUndoComplete(task)} 
-                title="Mark as Incomplete">
-                  ↩️ <span className="md:hidden text-sm font-bold">Undo Complete</span>
-                </button>
+                <div className="flex gap-2 justify-center">
+                  {isArchivePage ? (
+                    <>
+                      <button
+                        onClick={() => handleRestore(task)}
+                        className="bg-green-100 dark:bg-green-900/40 hover:bg-green-200 dark:hover:bg-green-800 px-3 py-2 rounded-lg transition-colors"
+                        title="Restore"
+                      >
+                        ♻️
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(task.id)}
+                        className="bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-800 px-3 py-2 rounded-lg transition-colors"
+                        title="Delete Permanently"
+                      >
+                        🗑️
+                      </button>
+                    </>
+                  ) : (
+                    <>                   
+                      <button 
+                      className="w-full md:w-auto bg-orange-50 dark:bg-slate-700/50 md:bg-transparent border-none text-[1.15em] cursor-pointer py-[4px] px-[12px] md:px-[5px] text-[#f89c0e] hover:text-[#d37800] dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2" 
+                      onClick={() => handleUndoComplete(task)} 
+                      title="Mark as Incomplete">
+                        ↩️ <span className="md:hidden text-sm font-bold">Undo Complete</span>
+                      </button>
+
+                      <button
+                          onClick={() => handleArchive(task)}
+                          className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 px-3 py-2 rounded-lg transition-colors"
+                          title="Archive"
+                      >
+                          📦
+                      </button>
+                    </>
+                  )}
+
+                </div>
               ) : (
                 <div 
                 className="flex gap-[8px] md:gap-[10px] justify-between md:justify-center bg-orange-50/30 dark:bg-slate-700/30 md:bg-transparent px-2 py-1 rounded-lg">

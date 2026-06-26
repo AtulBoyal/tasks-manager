@@ -10,7 +10,8 @@ function LoginScreen({
   isLoading,
   hasBiometricSetup, 
   loginWithBiometrics, 
-  setupBiometrics 
+  setupBiometrics,
+  onForgotPin
 }) {
 
   const signInWithGoogle = async () => {
@@ -89,6 +90,14 @@ function LoginScreen({
                 </button>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={onForgotPin}
+              className="text-xs text-orange-500 hover:underline mt-3"
+            >
+              Forgot PIN?
+            </button>
 
             <button onClick={signOut} className="block mx-auto mt-6 text-xs text-red-500 hover:text-red-600 hover:underline">
               Sign out of Google

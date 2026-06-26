@@ -2,6 +2,7 @@ import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from 'react-hot-toast';
+import FocusMode from './pages/FocusMode';
 
 import { generateAutoTags } from './utils/tagEngine';
 import { formatDate, getFactorClass } from './utils/formatters';
@@ -16,6 +17,8 @@ import { useRecurringTasks } from './hooks/useRecurringTasks';
 import { useBiometrics } from './hooks/useBiometrics';
 import { useTaskActions } from './hooks/useTaskActions';
 import { useTaskForm } from './hooks/useTaskForm';
+import { useProfile } from './hooks/useProfile';
+import ResetPinModal from './components/ResetPinModal';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 import { TaskProvider } from './context/TaskContext';
@@ -25,22 +28,30 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Settings = lazy(() => import('./pages/Settings'));
 const AnalyticsPage = lazy(() => import('./pages/Analytics'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Archive = lazy(() => import('./pages/Archive'));
 
 function App() {  
   const { session } = useAuth();
+  const {
+      profile,
+      updateProfile,
+      loading
+  } = useProfile(session);
 
   const {isLocallyUnlocked, enteredPassword, setEnteredPassword, isLoading, handleUnlock} = 
-  useVaultLock();
+  useVaultLock(session);
 
   const {tasks, setTasks, fetchTasks, addTask, editTask, removeTask} = useTasks(session?.user?.id, isLocallyUnlocked);
 
   const {taskName, setTaskName, factor, setFactor, lastDate,  setLastDate, startDate, setStartDate, taskLinks, setTaskLinks, taskTags, setTaskTags, currentTagInput, setCurrentTagInput, subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput, recurrence, setRecurrence, editingTaskId, setEditingTaskId, resetForm} = useTaskForm();
 
-  const {handleDelete, handleComplete, handleUndoComplete, handleInlineUpdate, handleToggleSubtask, handleQuickAdd} = 
+  const {handleDelete, handleComplete, handleUndoComplete, handleInlineUpdate, handleToggleSubtask, handleQuickAdd, handleArchive, handleRestore} = 
   useTaskActions({tasks, setTasks, addTask, editTask, removeTask, session});
 
   const {hasBiometricSetup, setupBiometrics, loginWithBiometrics} = 
   useBiometrics({handleUnlock, setEnteredPassword});
+
+  const [showResetPinModal, setShowResetPinModal] = useState(false);
 
 
   useEffect(() => {if (isLocallyUnlocked && session?.user?.id) {fetchTasks();}}, [isLocallyUnlocked, session, fetchTasks]);
@@ -78,6 +89,23 @@ function App() {
   useKeyboardShortcuts({isLocallyUnlocked, setIsQuickAddOpen});
 
   const todayDate = new Date().toISOString().split('T')[0];
+
+  const handleForgotPin = () => {
+    setShowResetPinModal(true);
+  };
+
+  const handleResetPin = (newPin) => {
+    if (!session?.user?.id) return;
+
+    const pinKey = `app_pin_${session.user.id}`;
+
+    localStorage.setItem(pinKey, newPin);
+
+    setEnteredPassword('');
+    setShowResetPinModal(false);
+
+    toast.success("Vault PIN updated successfully.");
+  };
 
   useEffect(() => {
     if (isDarkMode) {
@@ -236,6 +264,7 @@ function App() {
         hasBiometricSetup={hasBiometricSetup}
         loginWithBiometrics={loginWithBiometrics}
         setupBiometrics={setupBiometrics}
+        handleForgotPin={handleForgotPin}
       >
         <Suspense
           fallback={
@@ -257,6 +286,7 @@ function App() {
                     handleDelete,
                     handleComplete,
                     handleUndoComplete,
+                    handleArchive,
                     handleInlineUpdate,
                     handleToggleSubtask,
                     handleEdit,
@@ -315,6 +345,7 @@ function App() {
                     handleComplete={handleComplete}
                     handleUndoComplete={handleUndoComplete}
                     handleToggleSubtask={handleToggleSubtask}
+                    handleArchive={handleArchive}
                     showCompleted={showCompleted}
                     setShowCompleted={setShowCompleted}
                     isQuickAddOpen={isQuickAddOpen}
@@ -335,12 +366,54 @@ function App() {
 
             <Route
               path="/settings"
-              element={<Settings />}
+              element={
+                <Settings
+                  session={session}
+                  profile={profile}
+                  updateProfile={updateProfile}
+                  loading={loading}
+                />
+              }
             />
 
             <Route
               path="/analytics"
-              element={<AnalyticsPage tasks={tasks} />}
+              element={
+                <AnalyticsPage
+                  tasks={tasks}
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
+                />
+              }
+            />
+
+            <Route
+              path="/focus"
+              element={
+                <FocusMode
+                  tasks={tasks}
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
+                  handleComplete={handleComplete}
+                />
+              }
+            />
+
+            <Route
+              path="/archive"
+              element={
+                <Archive
+                  tasks={tasks}
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
+                  formatDate={formatDate}
+                  getFactorClass={getFactorClass}
+                  handleDelete={handleDelete}
+                  handleUndoComplete={handleUndoComplete}
+                  handleToggleSubtask={handleToggleSubtask}
+                  handleRestore={handleRestore}
+                />
+              }
             />
 
             <Route
@@ -350,6 +423,11 @@ function App() {
           </Routes>
         </Suspense>
       </ProtectedRoute>
+      <ResetPinModal
+        isOpen={showResetPinModal}
+        onClose={() => setShowResetPinModal(false)}
+        onConfirmReset={handleResetPin}
+      />
       <Analytics />
     </div>
     </>

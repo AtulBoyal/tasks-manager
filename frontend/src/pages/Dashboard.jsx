@@ -42,6 +42,7 @@ export default function Dashboard({
   handleComplete,
   handleUndoComplete,
   handleToggleSubtask,
+  handleArchive,
 
   showCompleted,
   setShowCompleted,
@@ -94,6 +95,8 @@ export default function Dashboard({
                   handleDelete={handleDelete}
                   handleComplete={handleComplete}
                   handleToggleSubtask={handleToggleSubtask}
+                  handleUndoComplete={handleUndoComplete}
+                  handleArchive={handleArchive}
                 />
               </div>
             )}
@@ -116,6 +119,8 @@ export default function Dashboard({
               handleDelete={handleDelete}
               handleComplete={handleComplete}
               handleToggleSubtask={handleToggleSubtask}
+              handleUndoComplete={handleUndoComplete}
+              handleArchive={handleArchive}
             />
           </>
         )}
@@ -163,6 +168,7 @@ export default function Dashboard({
               getFactorClass={getFactorClass}
               handleUndoComplete={handleUndoComplete}
               handleToggleSubtask={handleToggleSubtask}
+              handleArchive={handleArchive}
             />
           )}
         </SectionCard>

@@ -21,6 +21,14 @@ export default function Navbar() {
       <NavLink to="/settings" className={navClass}>
         Settings
       </NavLink>
+
+      <NavLink to="/archive" className={navClass}>
+        📦 Archive
+      </NavLink>
+
+      <NavLink to="/focus" className={navClass}>
+        🎯 Focus
+      </NavLink>
     </nav>
   );
 }
