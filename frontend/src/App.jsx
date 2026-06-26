@@ -68,7 +68,13 @@ function App() {
   const [filterStatus, setFilterStatus] = useState('Active'); 
   const [showCompleted, setShowCompleted] = useState(false);  
 
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === null) {
+      return true; // Default for first-time users
+    }
+    return savedTheme === "dark";
+  });
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const {filteredActiveTasks, filteredCompletedTasks} = 
