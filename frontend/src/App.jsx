@@ -18,6 +18,7 @@ import { useBiometrics } from './hooks/useBiometrics';
 import { useTaskActions } from './hooks/useTaskActions';
 import { useTaskForm } from './hooks/useTaskForm';
 import { useProfile } from './hooks/useProfile';
+import { taskService } from './services/taskService';
 import ResetPinModal from './components/ResetPinModal';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -41,7 +42,7 @@ function App() {
   const {isLocallyUnlocked, enteredPassword, setEnteredPassword, isLoading, handleUnlock} = 
   useVaultLock(session);
 
-  const {tasks, setTasks, fetchTasks, addTask, editTask, removeTask} = useTasks(session?.user?.id, isLocallyUnlocked);
+  const {tasks, setTasks, fetchTasks, addTask, editTask, removeTask, contestExists} = useTasks(session?.user?.id, isLocallyUnlocked);
 
   const {taskName, setTaskName, factor, setFactor, lastDate,  setLastDate, startDate, setStartDate, taskLinks, setTaskLinks, taskTags, setTaskTags, currentTagInput, setCurrentTagInput, subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput, recurrence, setRecurrence, editingTaskId, setEditingTaskId, resetForm} = useTaskForm();
 
@@ -134,7 +135,10 @@ function App() {
 
             for (const [index, contest] of upcoming.entries()) {
               const contestName = `🏆 CF: ${contest.name}`;
-              const alreadyExists = tasks.some(t => t.name === contestName);
+              const alreadyExists = contestExists(contest.id);
+
+                if (alreadyExists)
+                    continue;
 
               if (!alreadyExists) {
                 const contestDateObj = new Date(contest.startTimeSeconds * 1000);
@@ -142,17 +146,33 @@ function App() {
                 const timeString = contestDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 
                 const newTask = {
-                  id: Date.now() + index, 
+                  id: Date.now() + index,
+                  user_id: session.user.id,
+                  cf_contest_id: contest.id,
                   name: contestName,
-                  factor: 'Urgent', 
+                  factor: 'Urgent',
                   last_date: contestDateStr,
                   completed: false,
+                  archived: false,
                   recurrence: 'none',
-                  links: [{ title: 'Registration / Contest Page', url: 'https://codeforces.com/contests' }],
+                  links: [
+                    {
+                      title: 'Registration / Contest Page',
+                      url: 'https://codeforces.com/contests/${contest.id}'
+                    }
+                  ],
                   tags: ['codeforces', 'contest'],
                   subtasks: [
-                    { id: Date.now() + 100 + index, title: `Register before ${timeString}`, completed: false },
-                    { id: Date.now() + 200 + index, title: `Compete at ${timeString}`, completed: false }
+                    {
+                      id: Date.now() + 100 + index,
+                      title: `Register before ${timeString}`,
+                      completed: false
+                    },
+                    {
+                      id: Date.now() + 200 + index,
+                      title: `Compete at ${timeString}`,
+                      completed: false
+                    }
                   ]
                 };
                 

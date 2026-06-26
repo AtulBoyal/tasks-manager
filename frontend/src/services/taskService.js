@@ -43,5 +43,17 @@ export const taskService = {
       .eq('id', taskId);
 
     if (error) throw error;
-  }
+  },
+
+  async contestExists(userId, contestId) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('cf_contest_id', contestId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return !!data;
+  },
 };

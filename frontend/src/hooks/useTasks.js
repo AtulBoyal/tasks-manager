@@ -51,6 +51,10 @@ export const useTasks = (userId, isUnlocked) => {
     );
   };
 
+  const contestExists = async (contestId) => {
+    return await taskService.contestExists(userId, contestId);
+  };
+
   // INITIAL FETCH
   useEffect(() => {
     if (isUnlocked && userId) {
@@ -65,6 +69,7 @@ export const useTasks = (userId, isUnlocked) => {
     fetchTasks,
     addTask,
     editTask,
-    removeTask
+    removeTask,
+    contestExists
   };
 };
