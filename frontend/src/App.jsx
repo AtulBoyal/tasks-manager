@@ -18,7 +18,6 @@ import { useBiometrics } from './hooks/useBiometrics';
 import { useTaskActions } from './hooks/useTaskActions';
 import { useTaskForm } from './hooks/useTaskForm';
 import { useProfile } from './hooks/useProfile';
-// import { taskService } from './services/taskService';
 import ResetPinModal from './components/ResetPinModal';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -42,7 +41,7 @@ function App() {
   const {isLocallyUnlocked, enteredPassword, setEnteredPassword, isLoading, handleUnlock} = 
   useVaultLock(session);
 
-  const {tasks, setTasks, fetchTasks, addTask, editTask, removeTask, contestExists} = useTasks(session?.user?.id, isLocallyUnlocked);
+  const {tasks, setTasks, fetchTasks, addTask, editTask, removeTask} = useTasks(session?.user?.id, isLocallyUnlocked);
 
   const {taskName, setTaskName, factor, setFactor, lastDate,  setLastDate, startDate, setStartDate, taskLinks, setTaskLinks, taskTags, setTaskTags, currentTagInput, setCurrentTagInput, subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput, recurrence, setRecurrence, editingTaskId, setEditingTaskId, resetForm} = useTaskForm();
 
@@ -118,79 +117,85 @@ function App() {
     }
   }, [isDarkMode]);
 
+  const existingContestIds = React.useRef(new Set());
+
   useEffect(() => {
-    if (!isLocallyUnlocked || tasks.length === 0) return;
+    existingContestIds.current = new Set(
+      tasks
+        .filter(t => t.cf_contest_id)
+        .map(t => t.cf_contest_id)
+    );
+  }, [tasks]);
+
+  useEffect(() => {
+    if (!isLocallyUnlocked) return;
+
+    if (!profile?.codeforces_sync) return;
 
     const fetchContests = async () => {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const lastFetch = localStorage.getItem('last_cf_fetch');
+      try {
+        const response = await fetch('https://codeforces.com/api/contest.list?gym=false');
+        const data = await response.json();
 
-      if (lastFetch !== todayStr) {
-        try {
-          const response = await fetch('https://codeforces.com/api/contest.list?gym=false');
-          const data = await response.json();
+        if (data.status === 'OK') {
+          const upcoming = data.result.filter(c => c.phase === 'BEFORE');
 
-          if (data.status === 'OK') {
-            const upcoming = data.result.filter(c => c.phase === 'BEFORE');
+          for (const [index, contest] of upcoming.entries()) {
+            if(existingContestIds.current.has(contest.id)) continue;
 
-            for (const [index, contest] of upcoming.entries()) {
-              const contestName = `🏆 CF: ${contest.name}`;
-              const alreadyExists = await contestExists(contest.id);
-
-              if (alreadyExists)
-                  continue;
-
-              if (!alreadyExists) {
-                const contestDateObj = new Date(contest.startTimeSeconds * 1000);
-                const contestDateStr = contestDateObj.toISOString().split('T')[0];
-                const timeString = contestDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                const newTask = {
-                  id: Date.now() + index,
-                  user_id: session.user.id,
-                  cf_contest_id: contest.id,
-                  name: contestName,
-                  factor: 'Urgent',
-                  last_date: contestDateStr,
-                  completed: false,
-                  archived: false,
-                  recurrence: 'none',
-                  links: [
-                    {
-                      title: 'Registration / Contest Page',
-                      url: `https://codeforces.com/contests/${contest.id}`
-                    }
-                  ],
-                  tags: ['codeforces', 'contest'],
-                  subtasks: [
-                    {
-                      id: Date.now() + 100 + index,
-                      title: `Register before ${timeString}`,
-                      completed: false
-                    },
-                    {
-                      id: Date.now() + 200 + index,
-                      title: `Compete at ${timeString}`,
-                      completed: false
-                    }
-                  ]
-                };
-                
-                await addTask(newTask);
-              }
-            }
+            const contestName = `🏆 Codeforces: ${contest.name}`;
+            const contestDateObj = new Date(contest.startTimeSeconds * 1000);
+            const contestDateStr = contestDateObj.toISOString().split('T')[0];
+            const timeString = contestDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
-            localStorage.setItem('last_cf_fetch', todayStr);
+            const newTask = {
+              id: Date.now() + index,
+              user_id: session?.user?.id,
+              cf_contest_id: contest.id,
+              name: contestName,
+              factor: 'Urgent',
+              last_date: contestDateStr,
+              completed: false,
+              archived: false,
+              recurrence: 'none',
+              links: [
+                {
+                  title: 'Registration / Contest Page',
+                  url: `https://codeforces.com/contests/${contest.id}`
+                }
+              ],
+              tags: ['codeforces', 'contest'],
+              subtasks: [
+                {
+                  id: Date.now() + 100 + index,
+                  title: `Register before ${timeString}`,
+                  completed: false
+                },
+                {
+                  id: Date.now() + 200 + index,
+                  title: `Compete at ${timeString}`,
+                  completed: false
+                }
+              ]
+            };
+              
+            try{
+              if (existingContestIds.current.has(contest.id)) continue;
+              await addTask(newTask);
+              existingContestIds.current.add(contest.id);
+            }
+            catch(err){
+              console.error(err);
+            }
           }
-        } catch (error) {
-          console.error("Failed to fetch Codeforces contests", error);
-          toast.error("Failed to fetch Codeforces contests");
         }
+      } catch (error) {
+        console.error("Failed to fetch Codeforces contests", error);
       }
     };
 
     fetchContests();
-  }, [isLocallyUnlocked, tasks.length, addTask, contestExists, session?.user?.id]);
+  }, [isLocallyUnlocked, profile?.codeforces_sync, addTask, session?.user?.id]);
 
   const handleAddTag = (e) => {
     e.preventDefault();
@@ -234,7 +239,7 @@ function App() {
     } else {
       const newTask = {
         id: Date.now(),
-        user_id: session.user.id,
+        user_id: session?.user?.id,
         name: cleanTaskName,
         factor: factor || 'Normal',
         last_date: lastDate || null,
