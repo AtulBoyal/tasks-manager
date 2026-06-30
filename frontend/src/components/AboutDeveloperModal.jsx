@@ -45,15 +45,27 @@ export default function AboutDeveloperModal({
         onClick={(e) => e.stopPropagation()}
         className="
           w-full
-          max-w-xl
+          max-w-md
+          sm:max-w-xl
+
+          max-h-[90vh]
+          overflow-y-auto
+          scrollbar-hide
+
           rounded-3xl
+
           bg-[#FFFDF9]
           dark:bg-[#111827]
+
           border
           border-orange-100
           dark:border-slate-700
+
           shadow-2xl
-          p-10
+
+          p-6
+          sm:p-10
+
           animate-in
           fade-in
           zoom-in-95
@@ -70,7 +82,7 @@ export default function AboutDeveloperModal({
             </button>
         </div>
 
-        <hr className="my-8 border-orange-200 dark:border-orange-500/30" />
+        <hr className="my-4 sm:my-8 border-orange-200 dark:border-orange-500/30" />
 
         <div className="flex flex-col items-center text-center">
 
@@ -78,8 +90,10 @@ export default function AboutDeveloperModal({
 
             <div
                 className="
-                h-24
-                w-24
+                h-20
+                w-20
+                sm:h-24
+                sm:w-24
                 rounded-full
                 bg-gradient-to-br
                 from-orange-400
@@ -91,10 +105,18 @@ export default function AboutDeveloperModal({
                 shadow-lg
                 "
             >
-                <Code2 size={42}/>
+                <Code2 size={34} className="sm:w-[42px] sm:h-[42px]"/>
             </div>
 
-            <h2 id="developer-title" className="mt-6 text-4xl font-extrabold text-slate-800 dark:text-white">
+            <h2 id="developer-title" 
+              className="
+              mt-5
+              text-3xl
+              sm:text-4xl
+              font-extrabold
+              text-slate-800
+              dark:text-white
+              ">
                 Atul Boyal
             </h2>
 
@@ -106,7 +128,7 @@ export default function AboutDeveloperModal({
                 IIT Hyderabad
             </p>
 
-            <p className="mt-4 max-w-md text-sm leading-7 font-medium text-slate-700 dark:text-slate-300">
+            <p className="mt-3 sm:mt-4 max-w-md text-sm leading-7 font-medium text-slate-700 dark:text-slate-300">
               Passionate about building scalable software, operating systems, competitive programming, and modern full-stack applications focused on performance and user experience.
             </p>
 
@@ -119,9 +141,11 @@ export default function AboutDeveloperModal({
                         text-orange-700
                         border
                         border-orange-100
-                        px-3
+                        px-2.5
                         py-1
-                        text-sm
+                        text-xs
+                        sm:px-3
+                        sm:text-sm
 
                         dark:bg-orange-500/15
                         dark:text-orange-300
@@ -138,9 +162,11 @@ export default function AboutDeveloperModal({
                         text-orange-700
                         border
                         border-orange-100
-                        px-3
+                        px-2.5
                         py-1
-                        text-sm
+                        text-xs
+                        sm:px-3
+                        sm:text-sm
 
                         dark:bg-orange-500/15
                         dark:text-orange-300
@@ -157,9 +183,11 @@ export default function AboutDeveloperModal({
                         text-orange-700
                         border
                         border-orange-100
-                        px-3
+                        px-2.5
                         py-1
-                        text-sm
+                        text-xs
+                        sm:px-3
+                        sm:text-sm
 
                         dark:bg-orange-500/15
                         dark:text-orange-300
@@ -176,9 +204,11 @@ export default function AboutDeveloperModal({
                         text-orange-700
                         border
                         border-orange-100
-                        px-3
+                        px-2.5
                         py-1
-                        text-sm
+                        text-xs
+                        sm:px-3
+                        sm:text-sm
 
                         dark:bg-orange-500/15
                         dark:text-orange-300
@@ -195,9 +225,11 @@ export default function AboutDeveloperModal({
                         text-orange-700
                         border
                         border-orange-100
-                        px-3
+                        px-2.5
                         py-1
-                        text-sm
+                        text-xs
+                        sm:px-3
+                        sm:text-sm
 
                         dark:bg-orange-500/15
                         dark:text-orange-300
@@ -226,7 +258,8 @@ export default function AboutDeveloperModal({
                 border
                 border-orange-100
                 dark:border-slate-700
-                py-3
+                py-2.5
+                sm:py-3
                 transition-all
                 duration-200
                 hover:-translate-y-1
@@ -260,7 +293,8 @@ export default function AboutDeveloperModal({
                 border
                 border-orange-100
                 dark:border-slate-700
-                py-3
+                py-2.5
+                sm:py-3
                 transition-all
                 duration-200
                 border-orange-200
@@ -294,7 +328,8 @@ export default function AboutDeveloperModal({
                 border
                 border-orange-100
                 dark:border-slate-700
-                py-3
+                py-2.5
+                sm:py-3
                 transition-all
                 border-orange-200
                 bg-white/70
