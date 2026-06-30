@@ -1,5 +1,6 @@
 import Header from '../components/Header';
 import Navbar from '../components/Navbar';
+import FloatingDeveloperCard from "../components/FloatingDeveloperCard";
 
 export default function MainLayout({
   children,
@@ -16,9 +17,11 @@ export default function MainLayout({
 
       <Navbar />
 
-      <main className="w-full flex flex-col items-center">
+      <main className="flex-1 w-full flex flex-col items-center">
         {children}
       </main>
+
+      <FloatingDeveloperCard />
 
     </div>
   );

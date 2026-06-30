@@ -18,23 +18,32 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    (async () => {
+      const cacheNames = await caches.keys();
+
+      await Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) return caches.delete(cache);
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
         })
       );
     })
   );
-  self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
-  });
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('supabase.co')) return;
   if (event.request.method !== 'GET') return;
-  if (!event.request.url.startsWith('http')) return;
+  const url = new URL(event.request.url);
+
+  if (
+    url.origin !== self.location.origin &&
+    !url.hostname.includes("fonts.googleapis.com") &&
+    !url.hostname.includes("fonts.gstatic.com")
+  ) {
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
