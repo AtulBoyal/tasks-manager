@@ -161,7 +161,8 @@ function TaskTable({
                     <input
                       type="date"
                       value={task.last_date || ''}
-                      onChange={(e) => handleInlineUpdate(task.id, 'last_date', e.target.value)}
+                      // Clearing the picker gives '' — store "no deadline" as NULL
+                      onChange={(e) => handleInlineUpdate(task.id, 'last_date', e.target.value || null)}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                   </div>
