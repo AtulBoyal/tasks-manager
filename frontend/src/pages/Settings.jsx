@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useVault } from '../context/VaultContext';
 import { AUTO_LOCK_MINUTES } from '../hooks/useVaultLock';
 import { PIN_MAX_LENGTH } from '../utils/pinVault';
+import DataTransferCard from '../components/DataTransferCard';
 
 export default function Settings({
   session,
@@ -320,6 +321,9 @@ export default function Settings({
             </div>
           </div>
         </div>
+
+        {/* YOUR DATA */}
+        <DataTransferCard className={cardStyle} />
       </div>
     </MainLayout>
   );

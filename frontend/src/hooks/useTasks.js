@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { taskService } from '../services/taskService';
 
+export const IMPORT_BATCH_SIZE = 500;
+
 // Insert or replace a task by id (realtime events and local writes can race).
 const upsertById = (list, task) =>
   list.some(t => t.id === task.id)
@@ -53,6 +55,25 @@ export const useTasks = (userId) => {
     return updated;
   }, []);
 
+  // BULK CREATE (import). Inserts in batches; if a batch fails, the error
+  // carries importedCount so the caller can report partial progress.
+  const importTasks = useCallback(async (newTasks) => {
+    const created = [];
+
+    for (let i = 0; i < newTasks.length; i += IMPORT_BATCH_SIZE) {
+      try {
+        const batch = await taskService.createTasks(newTasks.slice(i, i + IMPORT_BATCH_SIZE));
+        created.push(...batch);
+        setTasks(prev => batch.reduce(upsertById, prev));
+      } catch (error) {
+        error.importedCount = created.length;
+        throw error;
+      }
+    }
+
+    return created;
+  }, []);
+
   // DELETE
   const removeTask = useCallback(async (taskId) => {
     await taskService.deleteTask(taskId);
@@ -79,6 +100,7 @@ export const useTasks = (userId) => {
     hasLoaded,
     fetchTasks,
     addTask,
+    importTasks,
     editTask,
     removeTask
   };

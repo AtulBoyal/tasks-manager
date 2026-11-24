@@ -18,6 +18,7 @@ export function TaskProvider({ userId, codeforcesSync = false, children }) {
     loading,
     hasLoaded,
     addTask,
+    importTasks,
     editTask,
     removeTask
   } = useTasks(userId);
@@ -34,7 +35,10 @@ export function TaskProvider({ userId, codeforcesSync = false, children }) {
     loading,
     hasLoaded,
     ...actions,
-    form
+    form,
+    // Imported tasks always belong to the signed-in user
+    importTasks: (newTasks) =>
+      importTasks(newTasks.map(task => ({ ...task, user_id: userId })))
   };
 
   return (
