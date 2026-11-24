@@ -120,11 +120,27 @@ describe('normalizeTask', () => {
       completion_date: null,
       archived: false,
       recurrence: 'none',
+      recurrence_rule: null,
       tags: ['os', 'algorithms'],
       links: [{ title: 'ok.example.com', url: 'https://ok.example.com/a' }],
       subtasks: [{ id: NOW, title: 'ok', completed: false }],
       cf_contest_id: null
     });
+  });
+
+  it('validates and completes recurrence rules', () => {
+    expect(normalizeTask({
+      name: 'Gym', recurrence: 'weekly', last_date: '2026-11-25',
+      recurrence_rule: { interval: 2, weekdays: [1, 3, 99] }
+    }).task.recurrence_rule).toEqual({ interval: 2, weekdays: [1, 3] });
+
+    // Old backups without a rule get one derived from the deadline
+    expect(normalizeTask({ name: 'Rent', recurrence: 'monthly', last_date: '2027-01-31' })
+      .task.recurrence_rule).toEqual({ interval: 1, monthDay: 31 });
+
+    // A rule on a one-off task is dropped
+    expect(normalizeTask({ name: 'X', recurrence: 'none', recurrence_rule: { interval: 3 } })
+      .task.recurrence_rule).toBeNull();
   });
 
   it('caps very long names', () => {
@@ -134,7 +150,7 @@ describe('normalizeTask', () => {
 
 describe('prepareImport', () => {
   it('round-trips a JSON export', () => {
-    const json = toExportJson([fullTask]);
+    const json = toExportJson([{ ...fullTask, recurrence_rule: { interval: 2, weekdays: [1, 5] } }]);
     const { tasks, duplicates, invalid } = prepareImport(json, 'backup.json', [], NOW);
 
     expect(duplicates).toBe(0);
@@ -147,6 +163,7 @@ describe('prepareImport', () => {
       completed: true,
       completion_date: '2026-11-26T09:30:00.000Z',
       recurrence: 'weekly',
+      recurrence_rule: { interval: 2, weekdays: [1, 5] },
       tags: ['dbms', 'college'],
       links: fullTask.links
     });
