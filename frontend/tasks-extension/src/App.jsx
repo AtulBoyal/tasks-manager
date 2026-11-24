@@ -10,12 +10,15 @@ function App() {
   const [tags, setTags] = useState(''); // Manual tags input
   
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const inputRef = useRef(null);
 
   useEffect(() => {
     inputRef.current?.focus();
-    const today = new Date().toISOString().split('T')[0];
-    setLastDate(today);
+    // Local date (toISOString() would give the UTC date)
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    setLastDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
   }, []);
 
   const handleSubmit = async (e) => {
@@ -24,8 +27,11 @@ function App() {
     if (!cleanName) return;
 
     setIsSaving(true);
-    
-    const linkArray = link.trim() ? [link.trim()] : [];
+    setErrorMsg('');
+
+    // Same shape as the web app: [{ title, url }]
+    const cleanLink = link.trim();
+    const linkArray = cleanLink ? [{ title: cleanLink, url: cleanLink }] : [];
     
     // 1. Process manual tags from the input box
     const manualTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
@@ -33,27 +39,39 @@ function App() {
     // 2. ✨ THE SMART MERGE: Feed the task name and manual tags into your engine
     const finalTags = generateAutoTags(cleanName, manualTags);
 
-    const newTask = {
-      // id: Date.now(),
-      name: cleanName,
-      factor: factor,
-      last_date: lastDate || null,
-      start_date: null,
-      completed: false,
-      recurrence: 'none',
-      links: linkArray,
-      tags: finalTags // Send the combined smart tags to the database
-    };
-
     try {
-      const { data, error } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user?.id) {
+        setErrorMsg('Not signed in. The extension has no Supabase session.');
+        return;
+      }
+
+      const newTask = {
+        id: Date.now(),
+        user_id: session.user.id,
+        name: cleanName,
+        factor: factor,
+        last_date: lastDate || null,
+        start_date: null,
+        completed: false,
+        recurrence: 'none',
+        links: linkArray,
+        tags: finalTags, // Send the combined smart tags to the database
+        subtasks: []
+      };
+
+      // Supabase returns errors instead of throwing them
+      const { error } = await supabase
         .from('tasks')
-        .insert([newTask])
-        .select()
-        .single();
-      window.close(); 
+        .insert([newTask]);
+
+      if (error) throw error;
+
+      window.close(); // Only close once the task is actually saved
     } catch (error) {
       console.error("Failed to save:", error);
+      setErrorMsg(error?.message || 'Failed to save task.');
     } finally {
       setIsSaving(false);
     }
@@ -130,6 +148,10 @@ function App() {
         >
           {isSaving ? 'Saving...' : 'Add to Tasks'}
         </button>
+
+        {errorMsg && (
+          <p className="text-xs text-red-400" role="alert">{errorMsg}</p>
+        )}
       </form>
     </div>
   );
