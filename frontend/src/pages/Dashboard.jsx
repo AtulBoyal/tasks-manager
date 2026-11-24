@@ -76,7 +76,7 @@ export default function Dashboard() {
             {habitTasks.length > 0 && (
               <div className="mb-8">
                 <h2 className="text-center font-extrabold text-[1.5rem] text-[#cc6000] dark:text-orange-500 mb-2 flex items-center justify-center gap-2">
-                  <span>🔁</span> Daily Habits
+                  <span>🔁</span> Recurring
                 </h2>
 
                 <TaskTable tasks={habitTasks} {...activeTableProps} />

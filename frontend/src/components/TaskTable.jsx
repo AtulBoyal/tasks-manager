@@ -1,4 +1,5 @@
 import React from 'react';
+import { describeRecurrence, normalizeRule } from '../utils/recurrence';
 
 // Links may be { title, url } objects (web app) or plain strings (older
 // extension versions). Only http(s) URLs are rendered as clickable links.
@@ -74,6 +75,15 @@ function TaskTable({
                 <span className={isTarget ? 'text-black dark:text-white font-extrabold text-base' : `text-black dark:text-slate-200 text-base ${isCompleted ? '' : 'font-semibold md:font-normal'}`}>
                   {isCompleted ? <>✅ <span className="line-through md:no-underline">{task.name}</span></> : task.name}
                 </span>
+
+                {task.recurrence && task.recurrence !== 'none' && (
+                  <span
+                    className="text-[0.7em] bg-orange-50 dark:bg-slate-700 text-[#b06d0e] dark:text-orange-300 px-[6px] py-[1px] rounded-full font-bold border border-orange-200 dark:border-slate-600 whitespace-nowrap"
+                    title="Repeats"
+                  >
+                    🔁 {describeRecurrence(task.recurrence, task.recurrence_rule ?? normalizeRule(task.recurrence, null, task.last_date))}
+                  </span>
+                )}
                 
                 {task.links && task.links.length > 0 && (
                   <div className="relative group/tooltip inline-block align-middle cursor-help">
