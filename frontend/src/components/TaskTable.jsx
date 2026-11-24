@@ -1,5 +1,15 @@
 import React from 'react';
 
+// Links may be { title, url } objects (web app) or plain strings (older
+// extension versions). Only http(s) URLs are rendered as clickable links.
+const normalizeLink = (link) => {
+  const url = typeof link === 'string' ? link : link?.url;
+  const title = typeof link === 'string' ? '' : link?.title;
+  const isSafe = typeof url === 'string' && /^https?:\/\//i.test(url.trim());
+
+  return { url: isSafe ? url.trim() : null, title: title || url || 'Link' };
+};
+
 function TaskTable({
   tasks,
   isCompleted,
@@ -72,8 +82,12 @@ function TaskTable({
                       🔗 {task.links.length}
                     </span>
                     <div className="absolute left-0 md:left-1/2 md:-translate-x-1/2 bottom-full mb-[8px] hidden group-hover/tooltip:flex flex-col gap-[6px] bg-[#333] dark:bg-black text-white text-[13px] rounded-[8px] p-[10px] z-10 w-max max-w-[250px] shadow-lg">
-                      {task.links.map((link, i) => (
-                        <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="text-[#93c5fd] hover:text-[#bfdbfe] hover:underline text-left truncate block">• {link.title || 'Link'}</a>
+                      {task.links.map(normalizeLink).map((link, i) => (
+                        link.url ? (
+                          <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="text-[#93c5fd] hover:text-[#bfdbfe] hover:underline text-left truncate block">• {link.title}</a>
+                        ) : (
+                          <span key={i} className="text-slate-400 text-left truncate block">• {link.title}</span>
+                        )
                       ))}
                       <div className="absolute top-full left-[15px] md:left-1/2 md:-translate-x-1/2 border-[6px] border-transparent border-t-[#333] dark:border-t-black"></div>
                     </div>
