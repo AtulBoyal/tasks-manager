@@ -169,7 +169,6 @@ export const useTaskActions = ({
     const smartTags = generateAutoTags(name, []);
 
     const newTask = {
-      id: Date.now(),
       user_id: session?.user?.id,
       name,
       factor: 'Normal',

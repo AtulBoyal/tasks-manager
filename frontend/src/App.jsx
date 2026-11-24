@@ -154,7 +154,6 @@ function App() {
             const timeString = contestDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
             const newTask = {
-              id: Date.now() + index,
               user_id: userId,
               cf_contest_id: contest.id,
               name: contestName,
@@ -249,7 +248,6 @@ function App() {
       return;
     } else {
       const newTask = {
-        id: Date.now(),
         user_id: userId,
         name: cleanTaskName,
         factor: factor || 'Normal',

@@ -48,7 +48,6 @@ function App() {
       }
 
       const newTask = {
-        id: Date.now(),
         user_id: session.user.id,
         name: cleanName,
         factor: factor,
