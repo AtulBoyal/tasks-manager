@@ -46,7 +46,7 @@ Designed with a modular architecture, the project emphasizes scalability, mainta
 * Custom tags
 * Subtasks
 * Resource links
-* Recurring daily tasks
+* Custom recurrence: every N days/weeks/months, chosen weekdays ("every 2 weeks on Mon, Wed") or a day of the month; overdue tasks skip to the next upcoming date
 * Natural-language Quick Add (Ctrl/Cmd+K): `submit lab friday !urgent #os` sets the deadline, priority and tags, with a live preview. Also understands `in 3 days`, `5 dec`, `every monday` and pasted links
 * Task prioritization
 
