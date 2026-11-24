@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const insert = vi.fn();
@@ -43,7 +43,7 @@ describe('popup', () => {
 
     render(<App />);
 
-    fireEvent.change(await screen.findByPlaceholderText('What do you need to do?'), {
+    fireEvent.change(await screen.findByPlaceholderText(/submit lab/), {
       target: { value: 'Upsolve codeforces round' }
     });
     fireEvent.change(screen.getByPlaceholderText(/Optional link/), {
@@ -68,7 +68,7 @@ describe('popup', () => {
 
     render(<App />);
 
-    fireEvent.change(await screen.findByPlaceholderText('What do you need to do?'), {
+    fireEvent.change(await screen.findByPlaceholderText(/submit lab/), {
       target: { value: 'Something' }
     });
     fireEvent.click(screen.getByText('Add to Tasks'));
@@ -85,5 +85,61 @@ describe('popup', () => {
     fireEvent.click(await screen.findByText('Sign out'));
 
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  describe('natural-language text', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 10, 25, 10, 0)); // Wednesday
+      auth.getSession.mockResolvedValue({ data: { session } });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('uses what the text specifies over the form fields', async () => {
+      render(<App />);
+
+      fireEvent.change(await screen.findByPlaceholderText(/submit lab/), {
+        target: { value: 'submit lab friday !urgent #os every week' }
+      });
+
+      expect(screen.getByRole('status', { name: 'Parsed from text' }))
+        .toHaveTextContent('🔴 Urgent');
+
+      fireEvent.click(screen.getByText('Add to Tasks'));
+      await waitFor(() => expect(window.close).toHaveBeenCalled());
+
+      const [[rows]] = insert.mock.calls;
+      expect(rows[0]).toMatchObject({
+        name: 'submit lab',
+        factor: 'Urgent',          // overrides the Normal select
+        last_date: '2026-11-27',   // overrides the date field (today)
+        recurrence: 'weekly'
+      });
+      expect(rows[0].tags).toContain('os');
+    });
+
+    it('falls back to the form fields when the text does not specify them', async () => {
+      render(<App />);
+
+      fireEvent.change(await screen.findByPlaceholderText(/submit lab/), {
+        target: { value: 'buy milk' }
+      });
+
+      expect(screen.queryByRole('status', { name: 'Parsed from text' })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Add to Tasks'));
+      await waitFor(() => expect(window.close).toHaveBeenCalled());
+
+      const [[rows]] = insert.mock.calls;
+      expect(rows[0]).toMatchObject({
+        name: 'buy milk',
+        factor: 'Normal',
+        last_date: '2026-11-25',   // the date field's default: today
+        recurrence: 'none'
+      });
+    });
   });
 });

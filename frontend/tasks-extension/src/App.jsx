@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { createSupabaseClient } from './supabaseClient';
 import { generateAutoTags } from '@shared/tagEngine';
+import { parseQuickAdd } from '@shared/quickAddParser';
+import { getLocalDateString, parseLocalDate } from '@shared/formatters';
 
 // The popup owns token refresh (see supabaseClient.js)
 const supabase = createSupabaseClient({ autoRefreshToken: true });
@@ -8,11 +10,20 @@ const supabase = createSupabaseClient({ autoRefreshToken: true });
 const inputClass =
   "w-full px-3 py-1.5 rounded-md bg-slate-800 border border-slate-700 focus:outline-none focus:border-orange-500 text-xs placeholder-slate-500";
 
-const getLocalDateString = () => {
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-};
+const PRIORITY_LABELS = { Urgent: '🔴 Urgent', Normal: '🟡 Normal', Later: '🔵 Later' };
+
+// One-line summary of what the typed text sets, e.g. "📅 Fri 27 Nov · 🔴 Urgent · #os"
+const describeParsed = (parsed) =>
+  [
+    parsed.lastDate &&
+      `📅 ${parseLocalDate(parsed.lastDate).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}`,
+    parsed.factor && PRIORITY_LABELS[parsed.factor],
+    parsed.recurrence !== 'none' && `🔁 ${parsed.recurrence}`,
+    ...parsed.tags.map((tag) => `#${tag}`),
+    ...parsed.links.map((l) => `🔗 ${l.title}`)
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
 // undefined while loading, null when signed out
 const useSession = () => {
@@ -86,7 +97,7 @@ function SignIn() {
 function QuickAddForm({ session }) {
   const [taskName, setTaskName] = useState('');
   const [factor, setFactor] = useState('Normal');
-  const [lastDate, setLastDate] = useState(getLocalDateString);
+  const [lastDate, setLastDate] = useState(() => getLocalDateString());
   const [link, setLink] = useState('');
   const [tags, setTags] = useState('');
 
@@ -112,18 +123,22 @@ function QuickAddForm({ session }) {
 
     const manualTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
+    // Anything typed in the task text ("friday !urgent #os") wins over the
+    // form fields; fields fill in whatever the text doesn't specify.
+    const parsed = parseQuickAdd(cleanName);
+
     try {
       // Supabase returns errors instead of throwing them
       const { error } = await supabase.from('tasks').insert([{
         user_id: session.user.id,
-        name: cleanName,
-        factor,
-        last_date: lastDate || null,
+        name: parsed.name,
+        factor: parsed.factor ?? factor,
+        last_date: parsed.lastDate ?? (lastDate || null),
         start_date: null,
         completed: false,
-        recurrence: 'none',
-        links: linkArray,
-        tags: generateAutoTags(cleanName, manualTags),
+        recurrence: parsed.recurrence,
+        links: [...linkArray, ...parsed.links],
+        tags: generateAutoTags(parsed.name, [...manualTags, ...parsed.tags]),
         subtasks: []
       }]);
 
@@ -143,6 +158,8 @@ function QuickAddForm({ session }) {
     await supabase.auth.signOut({ scope: 'local' });
   };
 
+  const parsedSummary = taskName.trim() ? describeParsed(parseQuickAdd(taskName)) : '';
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <input
@@ -150,11 +167,17 @@ function QuickAddForm({ session }) {
         type="text"
         value={taskName}
         onChange={(e) => setTaskName(e.target.value)}
-        placeholder="What do you need to do?"
+        placeholder="e.g. submit lab friday !urgent #os"
         className="w-full px-3 py-2 rounded-md bg-slate-800 border border-slate-700 focus:outline-none focus:border-orange-500 text-sm placeholder-slate-400"
         disabled={isSaving}
         required
       />
+
+      {parsedSummary && (
+        <p className="-mt-1 text-[11px] text-orange-300" role="status" aria-label="Parsed from text">
+          {parsedSummary}
+        </p>
+      )}
 
       <div className="flex gap-2">
         <select
