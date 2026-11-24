@@ -61,11 +61,12 @@ export const useTasks = (userId, isUnlocked) => {
     );
   }, []);
 
-  // Reset when the user changes (sign-out / account switch)
+  // Drop tasks from memory when the user changes or the vault locks;
+  // they are fetched again on unlock.
   useEffect(() => {
     setTasks([]);
     setHasLoaded(false);
-  }, [userId]);
+  }, [userId, isUnlocked]);
 
   // INITIAL FETCH
   useEffect(() => {
