@@ -71,11 +71,12 @@ Designed with a modular architecture, the project emphasizes scalability, mainta
 
 ## Security
 
-* Local Vault PIN
-* Biometric authentication
-* Protected application routes
-* Secure Supabase authentication
-* Device-local encrypted vault
+* Google sign-in via Supabase Auth
+* Row Level Security: each user can only access their own tasks
+* Device-local Vault PIN (salted PBKDF2 hash, never uploaded)
+* Attempt limiting with temporary lockouts and forced sign-out
+* Auto-lock after inactivity
+* Optional fingerprint / face unlock (WebAuthn)
 
 ---
 
@@ -267,10 +268,22 @@ npm test
 
 # Security
 
-* Sensitive credentials are excluded using `.gitignore`.
-* Authentication is handled through Supabase.
-* Vault PIN remains device-local and is never uploaded to the server.
-* Environment variables are never committed.
+* Authentication is handled by Supabase (Google OAuth).
+* Data access is enforced server-side with Postgres Row Level Security.
+* Environment files are excluded via `.gitignore`.
+
+### About the Vault PIN
+
+The Vault PIN is a **privacy lock for this device**, not encryption. Task data
+is stored in Supabase and protected by your Google sign-in and Row Level
+Security; the PIN stops someone using an already signed-in device from opening
+the app.
+
+* The PIN is stored only as a salted PBKDF2-SHA256 hash and never leaves the device.
+* 5 wrong attempts trigger an escalating lockout; 10 sign you out of Google.
+* "Forgot PIN" signs you out, so a new PIN can only be set after signing in with Google again.
+* The vault locks automatically after 10 minutes of inactivity, and tasks are cleared from memory while locked.
+* Fingerprint / face unlock uses a platform WebAuthn credential and never stores the PIN.
 
 ---
 
