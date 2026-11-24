@@ -1,10 +1,9 @@
 import MainLayout from '../layouts/MainLayout';
 
-export default function AnalyticsPage({
-  tasks = [],
-  isDarkMode,
-  setIsDarkMode
-}) {
+import { useTaskContext } from '../context/TaskContext';
+
+export default function AnalyticsPage() {
+  const { tasks } = useTaskContext();
 
   const totalTasks = tasks.length;
 
@@ -51,10 +50,7 @@ export default function AnalyticsPage({
     ).length;
 
   return (
-    <MainLayout
-      isDarkMode={isDarkMode}
-      setIsDarkMode={setIsDarkMode}
-    >
+    <MainLayout>
       <div className="w-full max-w-6xl mx-auto px-4 py-8">
 
         <h1 className="text-3xl font-bold text-orange-500 mb-8">

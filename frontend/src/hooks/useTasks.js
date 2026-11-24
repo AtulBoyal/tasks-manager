@@ -7,7 +7,8 @@ const upsertById = (list, task) =>
     ? list.map(t => (t.id === task.id ? task : t))
     : [...list, task];
 
-export const useTasks = (userId, isUnlocked) => {
+// Used inside TaskProvider, which only mounts while the vault is unlocked.
+export const useTasks = (userId) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   // True once the first fetch for this user has succeeded. Effects that
@@ -61,19 +62,15 @@ export const useTasks = (userId, isUnlocked) => {
     );
   }, []);
 
-  // Drop tasks from memory when the user changes or the vault locks;
-  // they are fetched again on unlock.
+  // Start fresh whenever the user changes, then fetch their tasks
   useEffect(() => {
     setTasks([]);
     setHasLoaded(false);
-  }, [userId, isUnlocked]);
 
-  // INITIAL FETCH
-  useEffect(() => {
-    if (isUnlocked && userId) {
+    if (userId) {
       fetchTasks();
     }
-  }, [fetchTasks, isUnlocked, userId]);
+  }, [fetchTasks, userId]);
 
   return {
     tasks,

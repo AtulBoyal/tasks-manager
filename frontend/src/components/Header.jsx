@@ -1,8 +1,10 @@
 import React from 'react';
 import { useVault } from '../context/VaultContext';
+import { useTheme } from '../context/ThemeContext';
 
-function Header({ isDarkMode, setIsDarkMode }) {
+function Header() {
   const vault = useVault();
+  const { isDarkMode, toggleTheme } = useTheme();
 
   return (
     <header className="w-full flex justify-between items-center p-4 sm:p-6 mb-2 max-w-[900px] mx-auto">
@@ -25,7 +27,7 @@ function Header({ isDarkMode, setIsDarkMode }) {
         )}
 
         <button
-          onClick={() => setIsDarkMode(!isDarkMode)}
+          onClick={toggleTheme}
           className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-slate-800 shadow-md border border-orange-100 dark:border-slate-700 text-xl hover:scale-105 transition-transform"
           title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}

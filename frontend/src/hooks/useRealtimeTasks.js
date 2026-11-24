@@ -2,13 +2,12 @@ import { useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 export const useRealtimeTasks = ({
-  isLocallyUnlocked,
   setTasks,
   userId
 }) => {
 
   useEffect(() => {
-    if (!isLocallyUnlocked || !userId) return;
+    if (!userId) return;
 
     const taskListener = supabase
       .channel('public:tasks')
@@ -59,6 +58,6 @@ export const useRealtimeTasks = ({
       supabase.removeChannel(taskListener);
     };
 
-  }, [isLocallyUnlocked, setTasks, userId]);
+  }, [setTasks, userId]);
 
 };

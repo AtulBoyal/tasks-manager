@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 
 export const useKeyboardShortcuts = ({
-  isLocallyUnlocked,
   setIsQuickAddOpen
 }) => {
   useEffect(() => {
@@ -11,10 +10,7 @@ export const useKeyboardShortcuts = ({
         e.key.toLowerCase() === 'k'
       ) {
         e.preventDefault();
-
-        if (isLocallyUnlocked) {
-          setIsQuickAddOpen(true);
-        }
+        setIsQuickAddOpen(true);
       }
     };
 
@@ -29,5 +25,5 @@ export const useKeyboardShortcuts = ({
         handleGlobalKeyDown
       );
     };
-  }, [isLocallyUnlocked, setIsQuickAddOpen]);
+  }, [setIsQuickAddOpen]);
 };

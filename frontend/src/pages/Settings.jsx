@@ -7,8 +7,6 @@ import { PIN_MAX_LENGTH } from '../utils/pinVault';
 
 export default function Settings({
   session,
-  isDarkMode,
-  setIsDarkMode,
   profile,
   updateProfile,
   loading
@@ -67,10 +65,7 @@ export default function Settings({
   };
 
   return (
-    <MainLayout
-      isDarkMode={isDarkMode}
-      setIsDarkMode={setIsDarkMode}
-    >
+    <MainLayout>
 
       <div className="w-full max-w-3xl mx-auto px-5 py-8 space-y-8">
 
