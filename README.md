@@ -33,9 +33,10 @@ Designed with a modular architecture, the project emphasizes scalability, mainta
 * Deadlines and due-date tracking
 * Start dates
 * Inline editing
-* Archive & restore tasks
+* Archive & restore tasks, with Undo for delete, complete and archive
 * Task completion history
-* Powerful search and filters
+* Powerful search and filters: words match names, tags, subtasks and links; `#tag` matches tags
+* Export a full JSON backup or a CSV for spreadsheets, and import from either (Settings → Your Data)
 
 ---
 
