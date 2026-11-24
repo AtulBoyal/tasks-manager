@@ -13,7 +13,6 @@ const normalizeLink = (link) => {
 function TaskTable({
   tasks,
   isCompleted,
-  todayDate,
   targetDate, 
   formatDate,
   getFactorClass,

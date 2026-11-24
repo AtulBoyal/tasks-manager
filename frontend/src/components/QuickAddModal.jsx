@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-function QuickAddModal({ isOpen, onClose, onQuickAdd, isDarkMode }) {
+function QuickAddModal({ isOpen, onClose, onQuickAdd }) {
   const [taskName, setTaskName] = useState('');
   const inputRef = useRef(null);
 

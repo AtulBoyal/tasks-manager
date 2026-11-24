@@ -75,7 +75,7 @@ function ConsistencyHeatmap({ tasks }) {
 
       {/* The Grid */}
       <div className="flex flex-wrap gap-[4px] sm:gap-[6px] justify-end">
-        {heatmapData.map((day, idx) => (
+        {heatmapData.map((day) => (
           <div
             key={day.date}
             title={`${day.count} tasks completed on ${day.date}`}
