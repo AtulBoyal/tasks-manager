@@ -242,15 +242,20 @@ export default function Settings({
                     onChange={async ({ target }) => {
                       const enabled = target.checked;
 
-                      await updateProfile({
-                        codeforces_sync: enabled
-                      });
+                      try {
+                        await updateProfile({
+                          codeforces_sync: enabled
+                        });
 
-                      toast.success(
-                        enabled
-                          ? "Codeforces Sync Enabled"
-                          : "Codeforces Sync Disabled"
-                      );
+                        toast.success(
+                          enabled
+                            ? "Codeforces Sync Enabled"
+                            : "Codeforces Sync Disabled"
+                        );
+                      } catch (error) {
+                        console.error("Failed to update Codeforces sync:", error);
+                        toast.error("Failed to update setting");
+                      }
 
                     }}
                   />
