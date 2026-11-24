@@ -1,4 +1,5 @@
 import { getLocalDateString } from '../utils/formatters';
+import { matchesSearch } from '../utils/taskSearch';
 
 export const useTaskFilters = ({
   tasks,
@@ -30,13 +31,7 @@ export const useTaskFilters = ({
       )
         return false;
 
-      if (
-        searchQuery &&
-        !task.name
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      )
-        return false;
+      if (!matchesSearch(task, searchQuery)) return false;
 
       return true;
     })
@@ -74,13 +69,7 @@ export const useTaskFilters = ({
     .filter(task => {
       if (!task.completed || task.archived) return false;
 
-      if (
-        searchQuery &&
-        !task.name
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      )
-        return false;
+      if (!matchesSearch(task, searchQuery)) return false;
 
       return true;
     })
