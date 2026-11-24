@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const auth = {
   signInWithOAuth: vi.fn(),
-  exchangeCodeForSession: vi.fn()
+  exchangeCodeForSession: vi.fn(),
+  // Sign-in triggers a reminder sync; no session keeps it a no-op here
+  getSession: vi.fn(async () => ({ data: { session: null } }))
 };
 
 vi.mock('../supabaseClient', () => ({

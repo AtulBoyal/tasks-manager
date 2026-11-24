@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Tasks Quick Add",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Quickly add tasks to your Tasks Manager.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1V9vtrTkoDEs4IbW0JFUtlVI8ChfF6w8WZyRmZ2Hzfd4pErzBsSW7LFZ9MWyB1RnxaYKNWAwpBOPEya9Ikn+jseOptVhfyk0++8lVn5OMahf2SvQWpIuTUfziJCSCqS6VXWWDLpe/F413axx4/jw26ABESEXTs1hjw/aggmQeUb1IM/vwgCgwH5ZjMkEU8nLwL4FgD1OWVVlGxXLQeBX8GZyEHJfpuYliy06BDVTwahDem/Igtg8fb6c+Ulr6Gcx6/35Qj5rZNcmayPGOaqjgr/Iaon98ESbauBlMnR20UUotUzIWMn/839v0Z/mO80volsJnuBc0I3acCY59zO6MwIDAQAB",
+  "icons": {
+    "128": "icon.png"
+  },
   "permissions": [
     "identity",
-    "storage"
+    "storage",
+    "alarms",
+    "notifications"
   ],
   "background": {
     "service_worker": "src/background.js",
@@ -14,7 +19,10 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_title": "Add Task"
+    "default_title": "Add Task",
+    "default_icon": {
+      "128": "icon.png"
+    }
   },
   "commands": {
     "_execute_action": {
