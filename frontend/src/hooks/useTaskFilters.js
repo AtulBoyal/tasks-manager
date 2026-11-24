@@ -1,3 +1,5 @@
+import { getLocalDateString } from '../utils/formatters';
+
 export const useTaskFilters = ({
   tasks,
   filterStatus,
@@ -6,7 +8,7 @@ export const useTaskFilters = ({
   searchQuery
 }) => {
 
-  const currentDateStr = new Date().toISOString().split('T')[0];
+  const currentDateStr = getLocalDateString();
 
   const filteredActiveTasks = tasks
     .filter(task => {
