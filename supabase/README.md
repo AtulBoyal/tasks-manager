@@ -7,7 +7,8 @@ supabase/
 ├── migrations/
 │   ├── 20261124000000_baseline_schema.sql          # schema as it was in production
 │   ├── 20261124000100_harden_tasks_and_policies.sql
-│   └── 20261124000200_convert_task_dates.sql
+│   ├── 20261124000200_convert_task_dates.sql
+│   └── 20261124000300_add_recurrence_rule.sql
 └── tests/
     ├── supabase_stub.sql   # stand-ins for Supabase's auth schema, roles, publication
     ├── seed/               # data inserted just before the migration of the same name

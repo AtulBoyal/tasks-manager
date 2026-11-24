@@ -208,4 +208,52 @@ select pg_temp.expect_count(
         and completion_date = timestamptz '2026-11-24T18:45:00Z' $q$,
   1, 'app''s ISO writes accepted');
 
+-- ---------------------------------------------------------------------------
+-- Recurrence rules
+-- ---------------------------------------------------------------------------
+insert into public.tasks (name, user_id, recurrence, recurrence_rule) values
+  ('rule weekly', '00000000-0000-0000-0000-00000000000b', 'weekly',  '{"interval": 2, "weekdays": [1, 3]}'),
+  ('rule monthly', '00000000-0000-0000-0000-00000000000b', 'monthly', '{"interval": 1, "monthDay": 31}'),
+  ('rule daily', '00000000-0000-0000-0000-00000000000b', 'daily',   '{"interval": 365}'),
+  ('rule none', '00000000-0000-0000-0000-00000000000b', 'weekly',  null);
+
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks where name like 'rule %' $q$,
+  4, 'valid recurrence rules accepted');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, recurrence, recurrence_rule)
+      values ('x', '00000000-0000-0000-0000-00000000000b', 'none', '{"interval": 1}') $q$,
+  'rule rejected on a one-off task');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, recurrence, recurrence_rule)
+      values ('x', '00000000-0000-0000-0000-00000000000b', 'daily', '{"interval": 0}') $q$,
+  'interval 0 rejected');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, recurrence, recurrence_rule)
+      values ('x', '00000000-0000-0000-0000-00000000000b', 'daily', '{"interval": 1.5}') $q$,
+  'fractional interval rejected');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, recurrence, recurrence_rule)
+      values ('x', '00000000-0000-0000-0000-00000000000b', 'daily', '{"interval": "2"}') $q$,
+  'string interval rejected');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, recurrence, recurrence_rule)
+      values ('x', '00000000-0000-0000-0000-00000000000b', 'weekly', '{"interval": 1, "weekdays": [1, 7]}') $q$,
+  'weekday 7 rejected');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, recurrence, recurrence_rule)
+      values ('x', '00000000-0000-0000-0000-00000000000b', 'monthly', '{"interval": 1, "monthDay": 32}') $q$,
+  'month day 32 rejected');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, recurrence, recurrence_rule)
+      values ('x', '00000000-0000-0000-0000-00000000000b', 'daily', '[1, 2]') $q$,
+  'non-object rule rejected');
+
 \echo 'All database tests passed'
