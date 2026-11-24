@@ -134,6 +134,7 @@ export const useTaskActions = ({
       });
     } catch (error) {
       console.error("Inline update failed:", error);
+      toast.error("Failed to save change");
     }
   };
 
@@ -155,35 +156,40 @@ export const useTaskActions = ({
 
     } catch (error) {
       console.error("Subtask toggle failed:", error);
+      toast.error("Failed to update subtask");
     }
   };
 
-  const handleQuickAdd = async ({
-    newTitle,
-    recurrence,
-    taskLinks,
-    subtasks,
-    generateAutoTags
-  }) => {
+  // Quick Add creates a plain task from just a title. It must not pick up
+  // links/subtasks/recurrence from the half-filled main form.
+  const handleQuickAdd = async ({ newTitle, generateAutoTags }) => {
+    const name = newTitle.trim();
+    if (!name) return;
 
-    const smartTags = generateAutoTags(newTitle, []);
+    const smartTags = generateAutoTags(name, []);
 
     const newTask = {
       id: Date.now(),
       user_id: session?.user?.id,
-      name: newTitle.trim(),
+      name,
       factor: 'Normal',
       last_date: null,
       start_date: null,
       completed: false,
       completion_date: null,
-      recurrence: recurrence || 'none',
-      links: Array.isArray(taskLinks) ? taskLinks : [],
+      recurrence: 'none',
+      links: [],
       tags: Array.isArray(smartTags) ? smartTags : [],
-      subtasks: Array.isArray(subtasks) ? subtasks : []
+      subtasks: []
     };
 
-    await addTask(newTask);
+    try {
+      await addTask(newTask);
+      toast.success('Task added');
+    } catch (error) {
+      console.error("Quick add failed:", error);
+      toast.error('Failed to add task');
+    }
   };
 
   return {
