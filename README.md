@@ -212,25 +212,29 @@ npm test
 
 # Screenshots
 
-* Dashboard
-* Dark Mode
-* Analytics
-* Mobile View
-* Archive
-* Settings
-* Vault Lock
-* Focus Mode
+### Dashboard
 
-```md
 ![Dashboard](./frontend/public/screenshots/dashboard.png)
+
+### Dark Mode
+
 ![Dark Mode](./frontend/public/screenshots/dark-mode.png)
-![Analytics](./frontend/public/screenshots/analytics.png)
-![Mobile UI](./frontend/public/screenshots/mobile-ui.png)
-![Archive](./frontend/public/screenshots/archive.png)
-![Settings](./frontend/public/screenshots/settings.png)
-![Vault Lock](./frontend/public/screenshots/vault-lock.png)
-![Focus Mode](./frontend/public/screenshots/focus-mode.png)
-```
+
+### Light Mode
+
+![Light Mode](./frontend/public/screenshots/light-mode.png)
+
+### Consistency Heatmap
+
+![Consistency Heatmap](./frontend/public/screenshots/heatmap.png)
+
+### Quick Add
+
+![Quick Add](./frontend/public/screenshots/quick-add.png)
+
+### Mobile
+
+<img src="./frontend/public/screenshots/mobile-ui.png" alt="Mobile UI" width="320" />
 
 ---
 
