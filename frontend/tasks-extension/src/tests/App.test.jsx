@@ -60,6 +60,8 @@ describe('popup', () => {
       links: [{ title: 'https://codeforces.com', url: 'https://codeforces.com' }]
     });
     expect(rows[0].tags).toContain('cp');
+    // New task -> reminders re-planned
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'SYNC_REMINDERS' });
   });
 
   it('keeps the popup open and shows the error when saving fails', async () => {
@@ -75,6 +77,7 @@ describe('popup', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('row-level security');
     expect(window.close).not.toHaveBeenCalled();
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith({ type: 'SYNC_REMINDERS' });
   });
 
   it('signs out of the extension only', async () => {
@@ -85,6 +88,22 @@ describe('popup', () => {
     fireEvent.click(await screen.findByText('Sign out'));
 
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    // Signed out -> background clears that account's reminders
+    await waitFor(() =>
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'SYNC_REMINDERS' }));
+  });
+
+  it('opens the reminder settings and comes back', async () => {
+    auth.getSession.mockResolvedValue({ data: { session } });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByText('⏰ Reminders'));
+    expect(await screen.findByLabelText('Desktop reminders')).toBeInTheDocument();
+    expect(screen.queryByText('Add to Tasks')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('← Back'));
+    expect(await screen.findByText('Add to Tasks')).toBeInTheDocument();
   });
 
   describe('natural-language text', () => {

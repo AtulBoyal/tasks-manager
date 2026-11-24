@@ -4,12 +4,18 @@ import { generateAutoTags } from '@shared/tagEngine';
 import { parseQuickAdd } from '@shared/quickAddParser';
 import { getLocalDateString, parseLocalDate } from '@shared/formatters';
 import { describeRecurrence } from '@shared/recurrence';
+import RemindersPanel from './RemindersPanel';
 
 // The popup owns token refresh (see supabaseClient.js)
 const supabase = createSupabaseClient({ autoRefreshToken: true });
 
 const inputClass =
   "w-full px-3 py-1.5 rounded-md bg-slate-800 border border-slate-700 focus:outline-none focus:border-orange-500 text-xs placeholder-slate-500";
+
+// Ask the background worker to re-plan reminders. Fire-and-forget: the popup
+// may close immediately afterwards, which is fine.
+const requestReminderSync = () =>
+  chrome.runtime.sendMessage({ type: 'SYNC_REMINDERS' }).catch(() => {});
 
 const PRIORITY_LABELS = { Urgent: '🔴 Urgent', Normal: '🟡 Normal', Later: '🔵 Later' };
 
@@ -95,7 +101,7 @@ function SignIn() {
   );
 }
 
-function QuickAddForm({ session }) {
+function QuickAddForm({ session, onOpenReminders }) {
   const [taskName, setTaskName] = useState('');
   const [factor, setFactor] = useState('Normal');
   const [lastDate, setLastDate] = useState(() => getLocalDateString());
@@ -146,6 +152,7 @@ function QuickAddForm({ session }) {
 
       if (error) throw error;
 
+      requestReminderSync();
       window.close(); // Only close once the task is actually saved
     } catch (error) {
       console.error("Failed to save:", error);
@@ -158,6 +165,7 @@ function QuickAddForm({ session }) {
   const signOut = async () => {
     // 'local' signs out only this extension, not the web app
     await supabase.auth.signOut({ scope: 'local' });
+    requestReminderSync(); // clears reminders for the signed-out account
   };
 
   const parsedSummary = taskName.trim() ? describeParsed(parseQuickAdd(taskName)) : '';
@@ -234,9 +242,14 @@ function QuickAddForm({ session }) {
 
       <div className="flex justify-between items-center text-[11px] text-slate-500">
         <span className="truncate">{session.user.email}</span>
-        <button type="button" onClick={signOut} className="hover:text-red-400 hover:underline">
-          Sign out
-        </button>
+        <div className="flex gap-3 shrink-0">
+          <button type="button" onClick={onOpenReminders} className="hover:text-orange-300 hover:underline">
+            ⏰ Reminders
+          </button>
+          <button type="button" onClick={signOut} className="hover:text-red-400 hover:underline">
+            Sign out
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -244,17 +257,21 @@ function QuickAddForm({ session }) {
 
 function App() {
   const session = useSession();
+  const [view, setView] = useState('add');
+  const showReminders = session && view === 'reminders';
 
   return (
     <div className="w-[320px] p-4 bg-slate-900 text-white font-sans border border-slate-700 shadow-2xl rounded-lg">
       <h2 className="text-sm font-bold text-orange-500 mb-4 flex items-center gap-2">
-        <span>⚡</span> Quick Add Task
+        <span>{showReminders ? '⏰' : '⚡'}</span> {showReminders ? 'Reminders' : 'Quick Add Task'}
       </h2>
 
       {session === undefined ? (
         <p className="text-xs text-slate-400">Loading…</p>
+      ) : showReminders ? (
+        <RemindersPanel onBack={() => setView('add')} />
       ) : session ? (
-        <QuickAddForm session={session} />
+        <QuickAddForm session={session} onOpenReminders={() => setView('reminders')} />
       ) : (
         <SignIn />
       )}
