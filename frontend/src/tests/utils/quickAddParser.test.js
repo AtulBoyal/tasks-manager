@@ -12,6 +12,7 @@ describe('parseQuickAdd', () => {
       factor: null,
       lastDate: null,
       recurrence: 'none',
+      recurrenceRule: null,
       tags: [],
       links: []
     });
@@ -125,6 +126,41 @@ describe('parseQuickAdd', () => {
         lastDate: '2026-11-30',
         name: 'standup'
       });
+    });
+
+    it.each([
+      ['water plants every 3 days', 'daily', { interval: 3 }, null],
+      ['review every 2 weeks', 'weekly', { interval: 2 }, null],
+      ['pay rent every 1 month', 'monthly', { interval: 1 }, null],
+      // Wednesday 25 Nov: the earliest listed day becomes the first deadline
+      ['gym every mon and wed', 'weekly', { interval: 1, weekdays: [1, 3] }, '2026-11-25'],
+      ['gym every mon,wed,fri', 'weekly', { interval: 1, weekdays: [1, 3, 5] }, '2026-11-25'],
+      ['standup every weekday', 'weekly', { interval: 1, weekdays: [1, 2, 3, 4, 5] }, '2026-11-25'],
+      ['long run every weekend', 'weekly', { interval: 1, weekdays: [0, 6] }, '2026-11-28']
+    ])('%s', (text, recurrence, recurrenceRule, lastDate) => {
+      const result = parse(text);
+      expect(result).toMatchObject({ recurrence, recurrenceRule, lastDate });
+      expect(result.name).not.toMatch(/every/);
+    });
+
+    it('combines an interval with a deadline weekday', () => {
+      expect(parse('review every 2 weeks friday')).toMatchObject({
+        name: 'review',
+        recurrence: 'weekly',
+        recurrenceRule: { interval: 2, weekdays: [5] },
+        lastDate: '2026-11-27'
+      });
+    });
+
+    it('stops a weekday list at the first other word', () => {
+      expect(parse('gym every monday and call mom')).toMatchObject({
+        name: 'gym and call mom',
+        recurrenceRule: { interval: 1, weekdays: [1] }
+      });
+    });
+
+    it('ignores out-of-range intervals', () => {
+      expect(parse('backup every 999 days')).toMatchObject({ recurrence: 'none', name: 'backup every 999 days' });
     });
 
     it('leaves "every" alone when not followed by a period', () => {

@@ -60,7 +60,7 @@ describe('Dashboard', () => {
   it('splits habits from one-off tasks and hides completed by default', () => {
     renderDashboard();
 
-    expect(screen.getByText('Daily Habits')).toBeInTheDocument();
+    expect(screen.getByText('Recurring')).toBeInTheDocument();
     expect(screen.getAllByText('Morning run').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Write report').length).toBeGreaterThan(0);
     expect(screen.queryByText('Old chore')).not.toBeInTheDocument();

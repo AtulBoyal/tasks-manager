@@ -3,6 +3,7 @@ import { createSupabaseClient } from './supabaseClient';
 import { generateAutoTags } from '@shared/tagEngine';
 import { parseQuickAdd } from '@shared/quickAddParser';
 import { getLocalDateString, parseLocalDate } from '@shared/formatters';
+import { describeRecurrence } from '@shared/recurrence';
 
 // The popup owns token refresh (see supabaseClient.js)
 const supabase = createSupabaseClient({ autoRefreshToken: true });
@@ -18,7 +19,7 @@ const describeParsed = (parsed) =>
     parsed.lastDate &&
       `📅 ${parseLocalDate(parsed.lastDate).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}`,
     parsed.factor && PRIORITY_LABELS[parsed.factor],
-    parsed.recurrence !== 'none' && `🔁 ${parsed.recurrence}`,
+    parsed.recurrence !== 'none' && `🔁 ${describeRecurrence(parsed.recurrence, parsed.recurrenceRule)}`,
     ...parsed.tags.map((tag) => `#${tag}`),
     ...parsed.links.map((l) => `🔗 ${l.title}`)
   ]
@@ -137,6 +138,7 @@ function QuickAddForm({ session }) {
         start_date: null,
         completed: false,
         recurrence: parsed.recurrence,
+        recurrence_rule: parsed.recurrenceRule,
         links: [...linkArray, ...parsed.links],
         tags: generateAutoTags(parsed.name, [...manualTags, ...parsed.tags]),
         subtasks: []

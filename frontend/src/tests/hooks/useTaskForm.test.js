@@ -115,4 +115,49 @@ describe('useTaskForm', () => {
     expect(result.current.taskTags).toEqual(['dbms']);
     expect(result.current.currentTagInput).toBe('');
   });
+
+  it('saves a normalized recurrence rule', async () => {
+    const { result, addTask } = renderForm();
+
+    act(() => {
+      result.current.setTaskName('Gym');
+      result.current.setLastDate('2026-11-25');
+      result.current.setRecurrence('weekly');
+      result.current.setRecurrenceRule({ interval: '2', weekdays: [3, 1, 1] });
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit(submitEvent);
+    });
+
+    expect(addTask).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence: 'weekly',
+      recurrence_rule: { interval: 2, weekdays: [1, 3] }
+    }));
+    expect(result.current.recurrenceRule).toBeNull(); // form reset
+  });
+
+  it('loads and clears the rule when editing', async () => {
+    const { result, editTask } = renderForm();
+
+    act(() => {
+      result.current.handleEdit({
+        id: 9, name: 'Rent', recurrence: 'monthly', last_date: '2027-01-31',
+        recurrence_rule: { interval: 1, monthDay: 31 }
+      });
+    });
+    expect(result.current.recurrenceRule).toEqual({ interval: 1, monthDay: 31 });
+
+    // Switching to one-off drops the rule (the database rejects rules on one-off tasks)
+    act(() => result.current.setRecurrence('none'));
+
+    await act(async () => {
+      await result.current.handleSubmit(submitEvent);
+    });
+
+    expect(editTask).toHaveBeenCalledWith(9, expect.objectContaining({
+      recurrence: 'none',
+      recurrence_rule: null
+    }));
+  });
 });

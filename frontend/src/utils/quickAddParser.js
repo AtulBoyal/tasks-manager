@@ -9,11 +9,14 @@
 //              is removed with it. ALL-CAPS words (e.g. "SAT") are not dates.
 //   Priority   !urgent !u !high | !normal !n !medium | !later !l !low
 //   Tags       #tag
-//   Recurrence every day / everyday, every week, every month, every <weekday>
+//   Recurrence every day / everyday, every week, every month, every 3 days,
+//              every 2 weeks, every mon and wed, every mon,wed, every weekday,
+//              every weekend
 //   Links      http(s):// URLs
 // Only the first date and first recurrence are used; other words stay in the name.
 
 import { getLocalDateString } from './formatters';
+import { normalizeRule, MAX_INTERVAL } from './recurrence';
 
 const PRIORITIES = {
   '!urgent': 'Urgent', '!u': 'Urgent', '!high': 'Urgent',
@@ -43,6 +46,8 @@ const UNITS = {
 };
 
 const CONNECTORS = new Set(['by', 'on', 'due']);
+
+const FREQUENCY_BY_UNIT = { day: 'daily', week: 'weekly', month: 'monthly' };
 
 // ---------- date helpers (local time) ----------
 
@@ -134,6 +139,54 @@ const matchDateAt = (words, tokens, i, today) => {
   return null;
 };
 
+// Reads what follows "every" at token j. Returns { recurrence, rule, length } or null.
+const matchRecurrenceAt = (words, tokens, j) => {
+  const w = words[j];
+  if (!w) return null;
+
+  if (FREQUENCY_BY_UNIT[w]) {
+    return { recurrence: FREQUENCY_BY_UNIT[w], rule: { interval: 1 }, length: 1 };
+  }
+
+  if (w === 'weekday' || w === 'weekdays') {
+    return { recurrence: 'weekly', rule: { interval: 1, weekdays: [1, 2, 3, 4, 5] }, length: 1 };
+  }
+  if (w === 'weekend' || w === 'weekends') {
+    return { recurrence: 'weekly', rule: { interval: 1, weekdays: [0, 6] }, length: 1 };
+  }
+
+  // every 3 days / every 2 weeks / every 6 months
+  const unit = UNITS[words[j + 1]];
+  if (/^\d{1,3}$/.test(w) && unit) {
+    const interval = Number(w);
+    if (interval < 1 || interval > MAX_INTERVAL) return null;
+    return { recurrence: FREQUENCY_BY_UNIT[unit], rule: { interval }, length: 2 };
+  }
+
+  // every mon / every mon and wed / every mon,wed,fri
+  const weekdays = [];
+  let k = j;
+  while (k < words.length) {
+    if (words[k] === 'and' && k > j && words[k + 1]) {
+      k++;
+      continue;
+    }
+    const parts = words[k].split(',').filter(Boolean);
+    const isDayList = parts.length > 0 && !isAcronym(tokens[k]) && parts.every((part) => part in WEEKDAYS);
+    if (!isDayList) break;
+    parts.forEach((part) => weekdays.push(WEEKDAYS[part]));
+    k++;
+  }
+  // Don't swallow a trailing "and" that wasn't followed by a day
+  while (k > j && words[k - 1] === 'and') k--;
+
+  if (weekdays.length > 0) {
+    return { recurrence: 'weekly', rule: { interval: 1, weekdays }, length: k - j };
+  }
+
+  return null;
+};
+
 const toLink = (token) => {
   const url = token.replace(/[),.;!?]+$/, '');
   try {
@@ -158,6 +211,7 @@ export const parseQuickAdd = (input, now = new Date()) => {
     factor: null,
     lastDate: null,
     recurrence: 'none',
+    recurrenceRule: null,
     tags: [],
     links: []
   };
@@ -198,19 +252,24 @@ export const parseQuickAdd = (input, now = new Date()) => {
       break;
     }
 
-    if (words[i] === 'every' && i + 1 < tokens.length && !used[i + 1]) {
-      const unit = words[i + 1];
-      if (unit === 'day') result.recurrence = 'daily';
-      else if (unit === 'week') result.recurrence = 'weekly';
-      else if (unit === 'month') result.recurrence = 'monthly';
-      else if (unit in WEEKDAYS && !isAcronym(tokens[i + 1])) {
-        result.recurrence = 'weekly';
-        result.lastDate = getLocalDateString(upcomingWeekday(today, WEEKDAYS[unit]));
-      } else continue;
+    if (words[i] !== 'every') continue;
 
-      used[i] = used[i + 1] = true;
-      break;
+    const match = matchRecurrenceAt(words, tokens, i + 1);
+    if (!match) continue;
+
+    const span = Array.from({ length: match.length + 1 }, (_, k) => i + k);
+    if (span.some((k) => used[k])) continue;
+    span.forEach((k) => { used[k] = true; });
+
+    result.recurrence = match.recurrence;
+    result.recurrenceRule = match.rule;
+
+    // "every mon and wed" is first due on the earliest of those days
+    if (match.rule.weekdays && match.rule.weekdays.length < 7) {
+      const upcoming = match.rule.weekdays.map((day) => upcomingWeekday(today, day));
+      result.lastDate = getLocalDateString(new Date(Math.min(...upcoming)));
     }
+    break;
   }
 
   // Deadline (first match)
@@ -231,6 +290,8 @@ export const parseQuickAdd = (input, now = new Date()) => {
       break;
     }
   }
+
+  result.recurrenceRule = normalizeRule(result.recurrence, result.recurrenceRule, result.lastDate);
 
   result.name =
     tokens.filter((_, i) => !used[i]).join(' ').trim() ||

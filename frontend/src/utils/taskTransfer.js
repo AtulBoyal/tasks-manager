@@ -2,6 +2,8 @@
 // Imported data is untrusted: every field is validated and rebuilt from a
 // whitelist before it is sent to the database.
 
+import { normalizeRule } from './recurrence';
+
 export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 export const MAX_IMPORT_TASKS = 5000;
 export const EXPORT_VERSION = 1;
@@ -32,6 +34,7 @@ const exportFields = (task) => ({
   completion_date: task.completion_date ?? null,
   archived: !!task.archived,
   recurrence: task.recurrence ?? 'none',
+  recurrence_rule: task.recurrence_rule ?? null,
   tags: Array.isArray(task.tags) ? task.tags : [],
   links: Array.isArray(task.links) ? task.links : [],
   subtasks: Array.isArray(task.subtasks) ? task.subtasks : [],
@@ -239,17 +242,21 @@ export const normalizeTask = (raw, idBase = Date.now()) => {
   if (!name) return { error: 'missing name' };
 
   const completed = raw.completed === true;
+  const recurrence = RECURRENCES.includes(raw.recurrence) ? raw.recurrence : 'none';
+  const lastDate = cleanDate(raw.last_date);
 
   return {
     task: {
       name: name.slice(0, MAX_NAME_LENGTH),
       factor: FACTORS.includes(raw.factor) ? raw.factor : 'Normal',
-      last_date: cleanDate(raw.last_date),
+      last_date: lastDate,
       start_date: cleanDate(raw.start_date),
       completed,
       completion_date: completed ? cleanTimestamp(raw.completion_date) : null,
       archived: raw.archived === true,
-      recurrence: RECURRENCES.includes(raw.recurrence) ? raw.recurrence : 'none',
+      recurrence,
+      // Validated and completed with defaults; null for one-off tasks
+      recurrence_rule: normalizeRule(recurrence, raw.recurrence_rule, lastDate),
       tags: cleanTags(raw.tags),
       links: cleanLinks(raw.links),
       subtasks: cleanSubtasks(raw.subtasks, idBase),

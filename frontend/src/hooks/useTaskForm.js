@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { generateAutoTags } from '../utils/tagEngine';
+import { normalizeRule } from '../utils/recurrence';
 
 // State and handlers for the create / edit task form.
 export const useTaskForm = ({ userId, addTask, editTask }) => {
@@ -14,6 +15,8 @@ export const useTaskForm = ({ userId, addTask, editTask }) => {
   const [subtasks, setSubtasks] = useState([]);
   const [currentSubtaskInput, setCurrentSubtaskInput] = useState('');
   const [recurrence, setRecurrence] = useState('none');
+  // { interval, weekdays?, monthDay? } — see utils/recurrence.js
+  const [recurrenceRule, setRecurrenceRule] = useState(null);
   const [editingTaskId, setEditingTaskId] = useState(null);
 
   const resetForm = () => {
@@ -27,6 +30,7 @@ export const useTaskForm = ({ userId, addTask, editTask }) => {
     setSubtasks([]);
     setCurrentSubtaskInput('');
     setRecurrence('none');
+    setRecurrenceRule(null);
     setEditingTaskId(null);
   };
 
@@ -48,6 +52,7 @@ export const useTaskForm = ({ userId, addTask, editTask }) => {
     setTaskTags(task.tags || []);
     setSubtasks(task.subtasks || []);
     setRecurrence(task.recurrence || 'none');
+    setRecurrenceRule(task.recurrence_rule ?? null);
   };
 
   const handleSubmit = async (e) => {
@@ -72,7 +77,8 @@ export const useTaskForm = ({ userId, addTask, editTask }) => {
           links: taskLinks,
           tags: smartTags,
           subtasks,
-          recurrence
+          recurrence,
+          recurrence_rule: normalizeRule(recurrence, recurrenceRule, lastDate || null)
         });
         toast.success('Task updated');
         resetForm();
@@ -93,6 +99,7 @@ export const useTaskForm = ({ userId, addTask, editTask }) => {
         completed: false,
         completion_date: null,
         recurrence: recurrence || 'none',
+        recurrence_rule: normalizeRule(recurrence || 'none', recurrenceRule, lastDate || null),
         links: Array.isArray(taskLinks) ? taskLinks : [],
         tags: Array.isArray(smartTags) ? smartTags : [],
         subtasks: Array.isArray(subtasks) ? subtasks : []
@@ -135,6 +142,9 @@ export const useTaskForm = ({ userId, addTask, editTask }) => {
 
     recurrence,
     setRecurrence,
+
+    recurrenceRule,
+    setRecurrenceRule,
 
     editingTaskId,
     setEditingTaskId,

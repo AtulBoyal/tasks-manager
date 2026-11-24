@@ -1,21 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { getLocalDateString, parseLocalDate } from '../utils/formatters';
-
-const shiftDate = (dateStr, recurrence, todayStr) => {
-  if (!dateStr) return null;
-
-  if (recurrence === 'daily') return todayStr;
-
-  const date = parseLocalDate(dateStr);
-
-  if (recurrence === 'weekly') {
-    date.setDate(date.getDate() + 7);
-  } else if (recurrence === 'monthly') {
-    date.setMonth(date.getMonth() + 1);
-  }
-
-  return getLocalDateString(date);
-};
+import { getLocalDateString } from '../utils/formatters';
+import { reopenDates } from '../utils/recurrence';
 
 // Re-opens completed recurring tasks once per day (per user, per device).
 export const useRecurringTasks = ({
@@ -57,8 +42,8 @@ export const useRecurringTasks = ({
           editTask(task.id, {
             completed: false,
             completion_date: null,
-            last_date: shiftDate(task.last_date, task.recurrence, todayStr),
-            start_date: shiftDate(task.start_date, task.recurrence, todayStr),
+            // Next occurrence per the task's rule, skipping missed ones
+            ...reopenDates(task, new Date()),
             subtasks: (task.subtasks || []).map(st => ({
               ...st,
               completed: false
