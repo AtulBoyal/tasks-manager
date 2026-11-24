@@ -27,7 +27,8 @@ describe('QuickAddModal', () => {
     expect(preview.getByText('submit lab')).toBeInTheDocument();
     expect(preview.getByText('📅 Tomorrow')).toBeInTheDocument();
     expect(preview.getByText('🔴 Urgent')).toBeInTheDocument();
-    expect(preview.getByText('🔁 Weekly')).toBeInTheDocument();
+    // "every week" + "tomorrow": repeats weekly on tomorrow's weekday
+    expect(preview.getByText(/^🔁 Weekly on (Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/)).toBeInTheDocument();
     expect(preview.getByText('#os')).toBeInTheDocument();
     expect(preview.getByText('🔗 moodle.example.edu')).toBeInTheDocument();
   });

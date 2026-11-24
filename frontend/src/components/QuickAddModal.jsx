@@ -2,17 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { parseQuickAdd } from '../utils/quickAddParser';
 import { generateAutoTags } from '../utils/tagEngine';
 import { getLocalDateString, parseLocalDate } from '../utils/formatters';
+import { describeRecurrence } from '../utils/recurrence';
 
 const PRIORITY_LABELS = {
   Urgent: '🔴 Urgent',
   Normal: '🟡 Normal',
   Later: '🟢 Later'
-};
-
-const RECURRENCE_LABELS = {
-  daily: 'Daily',
-  weekly: 'Weekly',
-  monthly: 'Monthly'
 };
 
 const formatDeadline = (lastDate) => {
@@ -54,7 +49,7 @@ function QuickAddPreview({ text }) {
         <span className={chipClass}>📅 {formatDeadline(parsed.lastDate)}</span>
         <span className={chipClass}>{PRIORITY_LABELS[parsed.factor || 'Normal']}</span>
         {parsed.recurrence !== 'none' && (
-          <span className={chipClass}>🔁 {RECURRENCE_LABELS[parsed.recurrence]}</span>
+          <span className={chipClass}>🔁 {describeRecurrence(parsed.recurrence, parsed.recurrenceRule)}</span>
         )}
         {tags.map((tag) => (
           <span key={tag} className={chipClass}>#{tag}</span>

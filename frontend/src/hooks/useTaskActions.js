@@ -215,6 +215,7 @@ export const useTaskActions = ({
       completed: false,
       completion_date: null,
       recurrence: parsed.recurrence,
+      recurrence_rule: parsed.recurrenceRule,
       links: parsed.links,
       tags: Array.isArray(smartTags) ? smartTags : [],
       subtasks: []
