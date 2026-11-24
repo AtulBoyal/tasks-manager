@@ -1,0 +1,19 @@
+version: 2
+
+updates:
+  # Web app dependencies
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for all minor/patch bumps instead of one per package
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # Keeps the SHA-pinned GitHub Actions up to date
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

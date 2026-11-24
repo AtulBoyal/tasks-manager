@@ -1,5 +1,7 @@
 # TaskVault
 
+[![CI](https://github.com/AtulBoyal/tasks-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/AtulBoyal/tasks-manager/actions/workflows/ci.yml)
+
 A modern full-stack productivity and task management platform built with React, Supabase, and real-time synchronization.
 
 TaskVault is designed for high-performance personal productivity with features like recurring habits, smart task organization, realtime sync, biometric vault locking, analytics, consistency tracking, and responsive cross-device experience.
