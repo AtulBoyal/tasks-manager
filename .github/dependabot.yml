@@ -12,6 +12,16 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
 
+  # Chrome extension dependencies
+  - package-ecosystem: npm
+    directory: /frontend/tasks-extension
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
   # Keeps the SHA-pinned GitHub Actions up to date
   - package-ecosystem: github-actions
     directory: /
