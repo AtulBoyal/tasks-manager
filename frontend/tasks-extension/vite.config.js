@@ -1,13 +1,22 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { crx } from '@crxjs/vite-plugin'
-import manifest from './manifest.json'
+import manifest from './manifest.json' with { type: 'json' }
+
+// Code shared with the web app (e.g. the tag engine) lives in frontend/src/utils
+const sharedDir = fileURLToPath(new URL('../src/utils', import.meta.url))
 
 export default defineConfig({
   plugins: [
     react(),
     crx({ manifest }),
   ],
+  resolve: {
+    alias: {
+      '@shared': sharedDir,
+    },
+  },
   server: {
     port: 5173,
     strictPort: true,
@@ -17,6 +26,10 @@ export default defineConfig({
       protocol: "ws",
       host: "127.0.0.1", // Forces Chrome to look at IPv4
       port: 5173,
+    },
+    fs: {
+      // Allow the dev server to serve the shared web-app modules
+      allow: ['.', sharedDir],
     },
   },
 })

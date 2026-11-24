@@ -14,7 +14,8 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      globals: globals.browser,
+      // chrome.* extension APIs
+      globals: { ...globals.browser, ...globals.webextensions },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
