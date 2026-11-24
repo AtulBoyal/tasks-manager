@@ -7,6 +7,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Tailwind 4 is a migration (new PostCSS plugin, CSS config, renamed
+      # utilities), not a drop-in bump. Remove once both apps are migrated.
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
     groups:
       # One PR for all minor/patch bumps instead of one per package
       minor-and-patch:
@@ -18,6 +23,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Tailwind 4 is a migration (new PostCSS plugin, CSS config, renamed
+      # utilities), not a drop-in bump. Remove once both apps are migrated.
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: [minor, patch]

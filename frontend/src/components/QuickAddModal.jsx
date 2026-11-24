@@ -73,9 +73,9 @@ function QuickAddModal({ isOpen, onClose, onQuickAdd }) {
 
   // Auto-focus the input when the modal opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current.focus(), 50);
-    }
+    if (!isOpen) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(timer);
   }, [isOpen]);
 
   // Close modal on Escape key
