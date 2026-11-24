@@ -1,4 +1,4 @@
-const CACHE_NAME = 'task-manager-v3'; // ✨ Bumped version
+const CACHE_NAME = 'task-manager-v4';
 
 const PRECACHE_URLS = [
   '/',
@@ -26,9 +26,12 @@ self.addEventListener('activate', (event) => {
           if (cache !== CACHE_NAME) {
             return caches.delete(cache);
           }
+          return undefined;
         })
       );
-    })
+
+      await self.clients.claim();
+    })() // must be invoked: waitUntil needs a promise, not a function
   );
 });
 
@@ -59,10 +62,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        const responseClone = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
+        // Only cache successful responses (never 404/500 pages)
+        if (networkResponse.ok) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
         return networkResponse;
       })
       .catch(async () => {

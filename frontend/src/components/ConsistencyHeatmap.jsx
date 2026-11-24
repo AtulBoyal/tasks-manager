@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { getLocalDateString } from '../utils/formatters';
 
 function ConsistencyHeatmap({ tasks }) {
   // 1. Generate the last 28 days (4 weeks)
@@ -10,8 +11,8 @@ function ConsistencyHeatmap({ tasks }) {
     
     tasks.forEach(task => {
       if (task.completed && task.completion_date) {
-        // Extract just the date part (YYYY-MM-DD) from the ISO string
-        const dateStr = task.completion_date.split('T')[0];
+        // Bucket by the local calendar day the task was completed on
+        const dateStr = getLocalDateString(new Date(task.completion_date));
         completionCounts[dateStr] = (completionCounts[dateStr] || 0) + 1;
       }
     });
@@ -23,7 +24,7 @@ function ConsistencyHeatmap({ tasks }) {
     for (let i = daysToTrack - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
-      const dateString = d.toISOString().split('T')[0];
+      const dateString = getLocalDateString(d);
       
       daysArray.push({
         date: dateString,

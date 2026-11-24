@@ -1,149 +1,81 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { getLocalDateString, parseLocalDate } from '../utils/formatters';
 
+const shiftDate = (dateStr, recurrence, todayStr) => {
+  if (!dateStr) return null;
+
+  if (recurrence === 'daily') return todayStr;
+
+  const date = parseLocalDate(dateStr);
+
+  if (recurrence === 'weekly') {
+    date.setDate(date.getDate() + 7);
+  } else if (recurrence === 'monthly') {
+    date.setMonth(date.getMonth() + 1);
+  }
+
+  return getLocalDateString(date);
+};
+
+// Re-opens completed recurring tasks once per day (per user, per device).
 export const useRecurringTasks = ({
   tasks,
-  setTasks,
-  editTask
+  editTask,
+  userId,
+  hasLoaded
 }) => {
+  const isRunning = useRef(false);
 
   useEffect(() => {
+    if (!userId || !hasLoaded || isRunning.current) return;
 
-    if (tasks.length === 0) return;
+    const todayStr = getLocalDateString();
+    const resetKey = `last_habit_reset_${userId}`;
 
-    const todayStr = new Date()
-      .toISOString()
-      .split('T')[0];
+    if (localStorage.getItem(resetKey) === todayStr) return;
 
-    const lastReset =
-      localStorage.getItem('last_habit_reset');
+    const dueForReset = tasks.filter(task => {
+      if (!task.completed || !task.recurrence || task.recurrence === 'none') {
+        return false;
+      }
+      if (!task.completion_date) return false;
 
-    if (lastReset === todayStr) return;
+      const completedOn = getLocalDateString(new Date(task.completion_date));
+      return completedOn !== todayStr;
+    });
 
-    const processRecurringTasks = async () => {
+    if (dueForReset.length === 0) {
+      localStorage.setItem(resetKey, todayStr);
+      return;
+    }
 
-      let updatedAny = false;
+    isRunning.current = true;
 
-      const updatedTasks = await Promise.all(
-        tasks.map(async (task) => {
-
-          if (
-            !task.completed ||
-            !task.recurrence ||
-            task.recurrence === 'none'
-          ) {
-            return task;
-          }
-
-          const completionDate =
-            task.completion_date
-              ? task.completion_date.split('T')[0]
-              : null;
-
-          if (
-            !completionDate ||
-            completionDate === todayStr
-          ) {
-            return task;
-          }
-
-          updatedAny = true;
-
-          let newDeadline =
-            task.last_date
-              ? new Date(task.last_date)
-              : null;
-
-          let newStartDate =
-            task.start_date
-              ? new Date(task.start_date)
-              : null;
-
-          if (task.recurrence === 'daily') {
-
-            if (newDeadline) {
-              newDeadline = new Date();
-            }
-
-            if (newStartDate) {
-              newStartDate = new Date();
-            }
-
-          } else if (task.recurrence === 'weekly') {
-
-            if (newDeadline) {
-              newDeadline.setDate(
-                newDeadline.getDate() + 7
-              );
-            }
-
-            if (newStartDate) {
-              newStartDate.setDate(
-                newStartDate.getDate() + 7
-              );
-            }
-
-          } else if (task.recurrence === 'monthly') {
-
-            if (newDeadline) {
-              newDeadline.setMonth(
-                newDeadline.getMonth() + 1
-              );
-            }
-
-            if (newStartDate) {
-              newStartDate.setMonth(
-                newStartDate.getMonth() + 1
-              );
-            }
-
-          }
-
-          const updatedTask = {
-            ...task,
+    (async () => {
+      const results = await Promise.allSettled(
+        dueForReset.map(task =>
+          editTask(task.id, {
             completed: false,
             completion_date: null,
-
-            last_date: newDeadline
-              ? newDeadline.toISOString().split('T')[0]
-              : null,
-
-            start_date: newStartDate
-              ? newStartDate.toISOString().split('T')[0]
-              : null,
-
-            subtasks: task.subtasks
-              ? task.subtasks.map(st => ({
-                  ...st,
-                  completed: false
-                }))
-              : []
-          };
-
-          try {
-            await editTask(task.id, updatedTask);
-          } catch (error) {
-            console.error(
-              'Recurring task update failed:',
-              error
-            );
-          }
-
-          return updatedTask;
-        })
+            last_date: shiftDate(task.last_date, task.recurrence, todayStr),
+            start_date: shiftDate(task.start_date, task.recurrence, todayStr),
+            subtasks: (task.subtasks || []).map(st => ({
+              ...st,
+              completed: false
+            }))
+          })
+        )
       );
 
-      if (updatedAny) {
-        setTasks(updatedTasks);
+      const failed = results.filter(r => r.status === 'rejected');
+      failed.forEach(r => console.error('Recurring task update failed:', r.reason));
+
+      // Only mark today as done if everything succeeded, so failures retry.
+      if (failed.length === 0) {
+        localStorage.setItem(resetKey, todayStr);
       }
 
-      localStorage.setItem(
-        'last_habit_reset',
-        todayStr
-      );
-    };
-
-    processRecurringTasks();
-
-  }, [tasks, setTasks, editTask]);
-
+      isRunning.current = false;
+    })();
+  }, [tasks, editTask, userId, hasLoaded]);
 };

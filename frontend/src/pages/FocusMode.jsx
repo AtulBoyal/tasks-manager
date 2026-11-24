@@ -1,4 +1,5 @@
 import MainLayout from '../layouts/MainLayout';
+import { getLocalDateString } from '../utils/formatters';
 
 export default function FocusMode({
   tasks = [],
@@ -7,9 +8,7 @@ export default function FocusMode({
   handleComplete
 }) {
 
-  const today = new Date()
-    .toISOString()
-    .split('T')[0];
+  const today = getLocalDateString();
 
   const focusTasks = tasks.filter(task => {
     if (task.completed) return false;

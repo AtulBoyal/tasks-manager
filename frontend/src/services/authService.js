@@ -6,6 +6,9 @@ export const authService = {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
+        // Always show Google's account chooser instead of silently reusing
+        // whichever account is signed in to the browser.
+        queryParams: { prompt: 'select_account' },
       },
     });
 

@@ -1,253 +1,154 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import {
+  getBiometricCredentialId,
+  setBiometricCredentialId,
+  clearBiometric,
+  removeLegacyBiometricData
+} from '../utils/pinVault';
 
-const bufferToBase64URLString = (buffer) => {
-  const bytes = new Uint8Array(buffer);
+// Fingerprint / face unlock via a platform WebAuthn credential.
+//
+// There is no server to verify the assertion, so this is a local
+// "user is present and verified" check, the same strength as the PIN screen.
+// It never stores the PIN: a successful check unlocks the vault directly.
 
-  let str = '';
-
-  for (let charCode of bytes) {
-    str += String.fromCharCode(charCode);
-  }
-
-  const base64String = btoa(str);
-
-  return base64String
+const bufferToBase64URL = (buffer) =>
+  btoa(String.fromCharCode(...new Uint8Array(buffer)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');
+
+const base64URLToBuffer = (value) => {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0)).buffer;
 };
 
-const base64URLStringToBuffer = (
-  base64URLString
-) => {
+const randomBytes = (length) =>
+  window.crypto.getRandomValues(new Uint8Array(length));
 
-  const base64 = base64URLString
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+// authenticatorData byte 32 holds the flags; bit 2 (0x04) = user verified
+const USER_VERIFIED_FLAG = 0x04;
 
-  const padLength =
-    (4 - (base64.length % 4)) % 4;
-
-  const padded = base64.padEnd(
-    base64.length + padLength,
-    '='
-  );
-
-  const binary = atob(padded);
-
-  const buffer = new ArrayBuffer(
-    binary.length
-  );
-
-  const bytes = new Uint8Array(buffer);
-
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return buffer;
+const wasUserVerified = (assertion) => {
+  const data = new Uint8Array(assertion.response.authenticatorData);
+  return data.length > 32 && (data[32] & USER_VERIFIED_FLAG) !== 0;
 };
 
-const generateRandomBuffer = (
-  length = 32
-) => {
+export const useBiometrics = ({ userId, email, onVerified }) => {
+  const isSupported =
+    typeof window !== 'undefined' && !!window.PublicKeyCredential;
 
-  const array = new Uint8Array(length);
+  const [credentialId, setCredentialId] = useState(null);
 
-  window.crypto.getRandomValues(array);
-
-  return array.buffer;
-};
-
-export const useBiometrics = ({
-  handleUnlock,
-  setEnteredPassword
-}) => {
-
-  const [
-    hasBiometricSetup,
-    setHasBiometricSetup
-  ] = useState(false);
-
+  // Older versions kept the PIN in plain text next to the credential.
   useEffect(() => {
-
-    const credId = localStorage.getItem(
-      'biometric_credential_id'
-    );
-
-    const savedPass = localStorage.getItem(
-      'biometric_password'
-    );
-
-    if (
-      credId &&
-      savedPass &&
-      window.PublicKeyCredential
-    ) {
-      setHasBiometricSetup(true);
-    }
-
+    removeLegacyBiometricData();
   }, []);
 
-  const setupBiometrics = async (
-    passwordToSave
-  ) => {
+  useEffect(() => {
+    setCredentialId(getBiometricCredentialId(userId));
+  }, [userId]);
 
-    if (!window.PublicKeyCredential) {
-      toast.error(
-        'Your device/browser does not support biometrics.'
-      );
-      return;
+  const hasBiometricSetup = isSupported && !!credentialId;
+
+  const setupBiometrics = useCallback(async () => {
+    if (!isSupported) {
+      toast.error('Your device/browser does not support biometrics.');
+      return false;
     }
+    if (!userId) return false;
 
     try {
-
-      const challenge =
-        generateRandomBuffer();
-
-      const userId =
-        generateRandomBuffer(16);
-
-      const publicKeyCredentialCreationOptions = {
-        challenge,
-
-        rp: {
-          name: 'Tasks Manager',
-          id: window.location.hostname
-        },
-
-        user: {
-          id: userId,
-          name: 'admin',
-          displayName: 'Admin'
-        },
-
-        pubKeyCredParams: [
-          {
-            alg: -7,
-            type: 'public-key'
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: randomBytes(32),
+          rp: {
+            name: 'Tasks Manager',
+            id: window.location.hostname
           },
-          {
-            alg: -257,
-            type: 'public-key'
-          }
-        ],
-
-        authenticatorSelection: {
-          authenticatorAttachment:
-            'platform',
-
-          userVerification:
-            'required'
-        },
-
-        timeout: 60000
-      };
-
-      const credential =
-        await navigator.credentials.create({
-          publicKey:
-            publicKeyCredentialCreationOptions
-        });
-
-      localStorage.setItem(
-        'biometric_credential_id',
-        bufferToBase64URLString(
-          credential.rawId
-        )
-      );
-
-      localStorage.setItem(
-        'biometric_password',
-        passwordToSave
-      );
-
-      setHasBiometricSetup(true);
-
-      toast.success(
-        'Fingerprint successfully registered!'
-      );
-
-    } catch (err) {
-
-      console.error(
-        'Biometric setup failed:',
-        err
-      );
-
-      toast.error(
-        'Failed to set up fingerprint.'
-      );
-    }
-  };
-
-  const loginWithBiometrics = async () => {
-
-    try {
-
-      const credentialIdString =
-        localStorage.getItem(
-          'biometric_credential_id'
-        );
-
-      const savedPassword =
-        localStorage.getItem(
-          'biometric_password'
-        );
-
-      if (
-        !credentialIdString ||
-        !savedPassword
-      ) {
-        throw new Error(
-          'No biometrics set up'
-        );
-      }
-
-      const publicKeyCredentialRequestOptions = {
-        challenge:
-          generateRandomBuffer(),
-
-        allowCredentials: [
-          {
-            id:
-              base64URLStringToBuffer(
-                credentialIdString
-              ),
-
-            type: 'public-key'
-          }
-        ],
-
-        userVerification:
-          'required',
-
-        timeout: 60000
-      };
-
-      await navigator.credentials.get({
-        publicKey:
-          publicKeyCredentialRequestOptions
+          user: {
+            id: randomBytes(16),
+            name: email || 'tasks-manager-user',
+            displayName: email || 'Tasks Manager user'
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: 'public-key' },
+            { alg: -257, type: 'public-key' }
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+            residentKey: 'discouraged'
+          },
+          attestation: 'none',
+          timeout: 60000
+        }
       });
 
-      setEnteredPassword(savedPassword);
+      if (!credential) throw new Error('No credential returned');
 
-      handleUnlock(savedPassword);
-      toast.success("Biometric login successful!");
+      const id = bufferToBase64URL(credential.rawId);
+      setBiometricCredentialId(userId, id);
+      setCredentialId(id);
 
-    } catch (err) {
+      toast.success('Fingerprint unlock enabled');
+      return true;
+    } catch (error) {
+      console.error('Biometric setup failed:', error);
+      toast.error(
+        error?.name === 'NotAllowedError'
+          ? 'Fingerprint setup was cancelled.'
+          : 'Failed to set up fingerprint.'
+      );
+      return false;
+    }
+  }, [isSupported, userId, email]);
 
-      console.error(
-        'Biometric login failed:',
-        err
+  const removeBiometrics = useCallback(() => {
+    if (!userId) return;
+    clearBiometric(userId);
+    setCredentialId(null);
+    toast.success('Fingerprint unlock removed');
+  }, [userId]);
+
+  const loginWithBiometrics = useCallback(async () => {
+    if (!credentialId) return;
+
+    try {
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge: randomBytes(32),
+          allowCredentials: [
+            { id: base64URLToBuffer(credentialId), type: 'public-key' }
+          ],
+          userVerification: 'required',
+          timeout: 60000
+        }
+      });
+
+      if (!assertion || !wasUserVerified(assertion)) {
+        throw new Error('User verification was not performed');
+      }
+
+      onVerified();
+      toast.success('Biometric unlock successful!');
+    } catch (error) {
+      console.error('Biometric login failed:', error);
+      toast.error(
+        error?.name === 'NotAllowedError'
+          ? 'Fingerprint not recognised or cancelled.'
+          : 'Biometric unlock failed. Use your PIN.'
       );
     }
-  };
+  }, [credentialId, onVerified]);
 
   return {
+    isSupported,
     hasBiometricSetup,
     setupBiometrics,
+    removeBiometrics,
     loginWithBiometrics
   };
 };

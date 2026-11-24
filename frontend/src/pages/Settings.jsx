@@ -1,6 +1,9 @@
 import MainLayout from '../layouts/MainLayout';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useVault } from '../context/VaultContext';
+import { AUTO_LOCK_MINUTES } from '../hooks/useVaultLock';
+import { PIN_MAX_LENGTH } from '../utils/pinVault';
 
 export default function Settings({
   session,
@@ -13,6 +16,10 @@ export default function Settings({
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [isChangingPin, setIsChangingPin] = useState(false);
+
+  const vault = useVault();
+  const biometrics = vault?.biometrics;
 
   const cardStyle =
     "rounded-2xl bg-white dark:bg-slate-800 border border-orange-100 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all duration-300 p-6";
@@ -42,39 +49,21 @@ export default function Settings({
 
   const email = session?.user?.email;
 
-  const handleChangePin = () => {
-    if (!session?.user?.id) return;
+  const handleChangePin = async (e) => {
+    e.preventDefault();
+    if (!vault) return;
 
-    const pinKey = `app_pin_${session.user.id}`;
-    const savedPin = localStorage.getItem(pinKey);
-
-    if (!currentPin || !newPin || !confirmPin) {
-      toast.error("All fields are required");
-      return;
+    setIsChangingPin(true);
+    try {
+      const changed = await vault.changePin(currentPin, newPin, confirmPin);
+      if (changed) {
+        setNewPin('');
+        setConfirmPin('');
+      }
+      setCurrentPin('');
+    } finally {
+      setIsChangingPin(false);
     }
-
-    if (savedPin !== currentPin) {
-      toast.error("Current PIN is incorrect");
-      return;
-    }
-
-    if (newPin.length < 4) {
-      toast.error("PIN must contain at least 4 characters");
-      return;
-    }
-
-    if (newPin !== confirmPin) {
-      toast.error("PINs do not match");
-      return;
-    }
-
-    localStorage.setItem(pinKey, newPin);
-
-    setCurrentPin('');
-    setNewPin('');
-    setConfirmPin('');
-
-    toast.success("Vault PIN updated successfully");
   };
 
   return (
@@ -150,42 +139,89 @@ export default function Settings({
           </h2>
 
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-            Change your local Vault PIN. This PIN protects only this device.
+            Your Vault PIN locks the app on this device only. The vault locks
+            automatically after {AUTO_LOCK_MINUTES} minutes of inactivity.
           </p>
 
-          <div className="space-y-4">
+          <form onSubmit={handleChangePin} className="space-y-4">
 
             <input
               type="password"
+              autoComplete="current-password"
               placeholder="Current PIN"
+              aria-label="Current PIN"
               value={currentPin}
+              maxLength={PIN_MAX_LENGTH}
               onChange={(e) => setCurrentPin(e.target.value)}
               className={inputStyle}
             />
 
             <input
               type="password"
+              autoComplete="new-password"
               placeholder="New PIN"
+              aria-label="New PIN"
               value={newPin}
+              maxLength={PIN_MAX_LENGTH}
               onChange={(e) => setNewPin(e.target.value)}
               className={inputStyle}
             />
 
             <input
               type="password"
+              autoComplete="new-password"
               placeholder="Confirm New PIN"
+              aria-label="Confirm New PIN"
               value={confirmPin}
+              maxLength={PIN_MAX_LENGTH}
               onChange={(e) => setConfirmPin(e.target.value)}
               className={inputStyle}
             />
 
             <button
-              onClick={handleChangePin}
-              className="w-full rounded-xl bg-orange-500 hover:bg-orange-600 transition py-3 font-semibold text-white shadow-md hover:shadow-lg"
+              type="submit"
+              disabled={isChangingPin}
+              className="w-full rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 transition py-3 font-semibold text-white shadow-md hover:shadow-lg"
             >
-              🔐 Update Vault PIN
+              {isChangingPin ? 'Updating…' : '🔐 Update Vault PIN'}
             </button>
 
+          </form>
+
+          {/* BIOMETRIC UNLOCK */}
+          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
+                👆 Fingerprint Unlock
+              </h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {!biometrics?.isSupported
+                  ? 'Not supported on this device or browser.'
+                  : biometrics.hasBiometricSetup
+                    ? 'Enabled on this device.'
+                    : 'Unlock the vault with your fingerprint or face on this device.'}
+              </p>
+            </div>
+
+            {biometrics?.isSupported && (
+              biometrics.hasBiometricSetup ? (
+                <button
+                  type="button"
+                  onClick={biometrics.removeBiometrics}
+                  className="px-5 py-2 rounded-xl border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition font-semibold"
+                >
+                  Turn off
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={biometrics.setupBiometrics}
+                  className="px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition font-semibold"
+                >
+                  Set up
+                </button>
+              )
+            )}
           </div>
 
         </div>
@@ -242,15 +278,20 @@ export default function Settings({
                     onChange={async ({ target }) => {
                       const enabled = target.checked;
 
-                      await updateProfile({
-                        codeforces_sync: enabled
-                      });
+                      try {
+                        await updateProfile({
+                          codeforces_sync: enabled
+                        });
 
-                      toast.success(
-                        enabled
-                          ? "Codeforces Sync Enabled"
-                          : "Codeforces Sync Disabled"
-                      );
+                        toast.success(
+                          enabled
+                            ? "Codeforces Sync Enabled"
+                            : "Codeforces Sync Disabled"
+                        );
+                      } catch (error) {
+                        console.error("Failed to update Codeforces sync:", error);
+                        toast.error("Failed to update setting");
+                      }
 
                     }}
                   />
