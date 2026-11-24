@@ -1,16 +1,56 @@
-# React + Vite
+# Tasks Quick Add (Chrome extension)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Add a task to Tasks Manager from any tab: press **Ctrl+Shift+K**
+(**Cmd+Shift+K** on Mac) or click the toolbar icon.
 
-Currently, two official plugins are available:
+## How it works
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Sign-in:** Google sign-in through Supabase, run by the background service
+  worker with `chrome.identity.launchWebAuthFlow` (PKCE). The session is kept in
+  `chrome.storage.local`; signing out of the extension does not sign you out
+  of the web app.
+- **Data:** tasks are inserted directly into Supabase as the signed-in user,
+  so the same Row Level Security rules as the web app apply.
+- **Tagging:** auto-tags come from the web app's `src/utils/tagEngine.js`
+  (imported via the `@shared` alias), so both stay in sync.
+- **Stable ID:** the `key` in `manifest.json` pins the extension ID to
+  `cogdfcnlmeiojefhcjdncmhbnbjnjgde`, which the sign-in redirect depends on.
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Create `tasks-extension/.env`:
 
-## Expanding the ESLint configuration
+   ```env
+   VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+   VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+   ```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2. In Supabase → **Authentication → URL Configuration → Redirect URLs**, add:
+
+   ```
+   https://cogdfcnlmeiojefhcjdncmhbnbjnjgde.chromiumapp.org/**
+   ```
+
+3. Build and load it:
+
+   ```bash
+   npm install
+   npm run build
+   ```
+
+   Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**
+   and choose `tasks-extension/dist`.
+
+## Development
+
+```bash
+npm run dev     # rebuilds on change; reload the extension in chrome://extensions
+npm run lint
+npm test
+```
+
+## Publishing to the Chrome Web Store
+
+The store assigns its own extension ID. Before uploading, remove `key` from
+`manifest.json`, then add the store ID's `https://<id>.chromiumapp.org/**`
+redirect URL in Supabase.
