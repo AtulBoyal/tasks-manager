@@ -23,6 +23,7 @@ import ResetPinModal from './components/ResetPinModal';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 import { TaskProvider } from './context/TaskContext';
+import { VaultProvider } from './context/VaultContext';
 import toast from 'react-hot-toast';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -39,8 +40,20 @@ function App() {
       loading
   } = useProfile(session);
 
-  const {isLocallyUnlocked, enteredPassword, setEnteredPassword, isLoading, handleUnlock} = 
-  useVaultLock(session);
+  const {
+    isLocallyUnlocked,
+    hasPin,
+    enteredPassword,
+    setEnteredPassword,
+    isLoading,
+    lockedUntil,
+    handleUnlock,
+    createPin,
+    changePin,
+    unlockWithBiometrics,
+    lock,
+    forgotPin
+  } = useVaultLock(session);
 
   const userId = session?.user?.id;
 
@@ -52,11 +65,13 @@ function App() {
   const {handleDelete, handleComplete, handleUndoComplete, handleInlineUpdate, handleToggleSubtask, handleQuickAdd, handleArchive, handleRestore} = 
   useTaskActions({tasks, setTasks, addTask, editTask, removeTask, session});
 
-  const {hasBiometricSetup, setupBiometrics, loginWithBiometrics} = 
-  useBiometrics({handleUnlock, setEnteredPassword});
+  const biometrics = useBiometrics({
+    userId,
+    email: session?.user?.email,
+    onVerified: unlockWithBiometrics
+  });
 
   const [showResetPinModal, setShowResetPinModal] = useState(false);
-
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -91,17 +106,17 @@ function App() {
     setShowResetPinModal(true);
   };
 
-  const handleResetPin = (newPin) => {
-    if (!session?.user?.id) return;
-
-    const pinKey = `app_pin_${session.user.id}`;
-
-    localStorage.setItem(pinKey, newPin);
-
-    setEnteredPassword('');
+  // Clears this device's PIN and signs out; a new PIN is created after
+  // signing back in with Google.
+  const handleResetPin = async () => {
+    await forgotPin();
     setShowResetPinModal(false);
+  };
 
-    toast.success("Vault PIN updated successfully.");
+  const vaultContextValue = {
+    lock,
+    changePin,
+    biometrics
   };
 
   useEffect(() => {
@@ -295,15 +310,20 @@ function App() {
       <ProtectedRoute
         isLocallyUnlocked={isLocallyUnlocked}
         session={session}
-        enteredPassword={enteredPassword}
-        setEnteredPassword={setEnteredPassword}
-        handlePasswordSubmit={handlePasswordSubmit}
-        isLoading={isLoading}
-        hasBiometricSetup={hasBiometricSetup}
-        loginWithBiometrics={loginWithBiometrics}
-        setupBiometrics={setupBiometrics}
-        handleForgotPin={handleForgotPin}
+        loginProps={{
+          hasPin,
+          enteredPassword,
+          setEnteredPassword,
+          handlePasswordSubmit,
+          onCreatePin: createPin,
+          isLoading,
+          lockedUntil,
+          hasBiometricSetup: biometrics.hasBiometricSetup,
+          loginWithBiometrics: biometrics.loginWithBiometrics,
+          onForgotPin: handleForgotPin
+        }}
       >
+        <VaultProvider value={vaultContextValue}>
         <Suspense
           fallback={
             <div className="min-h-screen flex items-center justify-center text-2xl font-bold text-orange-500">
@@ -459,6 +479,7 @@ function App() {
             />
           </Routes>
         </Suspense>
+        </VaultProvider>
       </ProtectedRoute>
       <ResetPinModal
         isOpen={showResetPinModal}
