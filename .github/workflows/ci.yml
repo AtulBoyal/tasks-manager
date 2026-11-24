@@ -53,3 +53,33 @@ jobs:
       # Fails on high/critical advisories in packages that ship to users
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+  database:
+    name: Database migrations & RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Disposable Postgres; never a real Supabase project
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Apply migrations and run RLS tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: sh supabase/tests/run.sh
