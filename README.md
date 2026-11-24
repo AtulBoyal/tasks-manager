@@ -46,7 +46,7 @@ Designed with a modular architecture, the project emphasizes scalability, mainta
 * Subtasks
 * Resource links
 * Recurring daily tasks
-* Quick Add (keyboard shortcut)
+* Natural-language Quick Add (Ctrl/Cmd+K): `submit lab friday !urgent #os` sets the deadline, priority and tags, with a live preview. Also understands `in 3 days`, `5 dec`, `every monday` and pasted links
 * Task prioritization
 
 ---

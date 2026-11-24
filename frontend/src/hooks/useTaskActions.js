@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { generateAutoTags } from "../utils/tagEngine";
+import { parseQuickAdd } from "../utils/quickAddParser";
 
 export const useTaskActions = ({
   tasks,
@@ -161,24 +162,24 @@ export const useTaskActions = ({
     }
   };
 
-  // Quick Add creates a plain task from just a title. It must not pick up
-  // links/subtasks/recurrence from the half-filled main form.
-  const handleQuickAdd = async (title) => {
-    const name = title.trim();
-    if (!name) return;
+  // Quick Add builds a task from one line of text ("submit lab friday !urgent #os").
+  // It must not pick up anything from the half-filled main form.
+  const handleQuickAdd = async (text) => {
+    if (!text.trim()) return;
 
-    const smartTags = generateAutoTags(name, []);
+    const parsed = parseQuickAdd(text);
+    const smartTags = generateAutoTags(parsed.name, parsed.tags);
 
     const newTask = {
       user_id: userId,
-      name,
-      factor: 'Normal',
-      last_date: null,
+      name: parsed.name,
+      factor: parsed.factor || 'Normal',
+      last_date: parsed.lastDate,
       start_date: null,
       completed: false,
       completion_date: null,
-      recurrence: 'none',
-      links: [],
+      recurrence: parsed.recurrence,
+      links: parsed.links,
       tags: Array.isArray(smartTags) ? smartTags : [],
       subtasks: []
     };
