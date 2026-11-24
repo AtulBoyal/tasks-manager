@@ -1,9 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { taskService } from '../services/taskService';
 
+// Insert or replace a task by id (realtime events and local writes can race).
+const upsertById = (list, task) =>
+  list.some(t => t.id === task.id)
+    ? list.map(t => (t.id === task.id ? task : t))
+    : [...list, task];
+
 export const useTasks = (userId, isUnlocked) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+  // True once the first fetch for this user has succeeded. Effects that
+  // compare against existing tasks (dedupe, recurrence) must wait for it.
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   // FETCH TASKS
   const fetchTasks = useCallback(async () => {
@@ -15,6 +24,7 @@ export const useTasks = (userId, isUnlocked) => {
       const data = await taskService.fetchTasks(userId);
 
       setTasks(data || []);
+      setHasLoaded(true);
     } catch (error) {
       console.error("Fetch tasks failed:", error);
     } finally {
@@ -26,13 +36,13 @@ export const useTasks = (userId, isUnlocked) => {
   const addTask = useCallback(async (task) => {
     const created = await taskService.createTask(task);
 
-    setTasks(prev => [...prev, created]);
+    setTasks(prev => upsertById(prev, created));
 
     return created;
   }, []);
 
   // UPDATE
-  const editTask = async (taskId, updates) => {
+  const editTask = useCallback(async (taskId, updates) => {
     const updated = await taskService.updateTask(taskId, updates);
 
     setTasks(prev =>
@@ -40,16 +50,22 @@ export const useTasks = (userId, isUnlocked) => {
     );
 
     return updated;
-  };
+  }, []);
 
   // DELETE
-  const removeTask = async (taskId) => {
+  const removeTask = useCallback(async (taskId) => {
     await taskService.deleteTask(taskId);
 
     setTasks(prev =>
       prev.filter(t => t.id !== taskId)
     );
-  };
+  }, []);
+
+  // Reset when the user changes (sign-out / account switch)
+  useEffect(() => {
+    setTasks([]);
+    setHasLoaded(false);
+  }, [userId]);
 
   // INITIAL FETCH
   useEffect(() => {
@@ -62,6 +78,7 @@ export const useTasks = (userId, isUnlocked) => {
     tasks,
     setTasks,
     loading,
+    hasLoaded,
     fetchTasks,
     addTask,
     editTask,
