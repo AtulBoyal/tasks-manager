@@ -1,6 +1,17 @@
+import { createElement } from "react";
 import toast from "react-hot-toast";
+import UndoToast from "../components/UndoToast";
 import { generateAutoTags } from "../utils/tagEngine";
 import { parseQuickAdd } from "../utils/quickAddParser";
+
+export const UNDO_TOAST_DURATION_MS = 6000;
+
+// "Task deleted · Undo" — onUndo runs if the user clicks Undo in time
+const showUndoToast = (message, onUndo, icon) =>
+  toast(
+    (t) => createElement(UndoToast, { toastId: t.id, message, onUndo }),
+    { duration: UNDO_TOAST_DURATION_MS, icon }
+  );
 
 export const useTaskActions = ({
   tasks,
@@ -11,13 +22,31 @@ export const useTaskActions = ({
   userId
 }) => {
 
+  // Puts a deleted task back exactly as it was (same id, links, subtasks…)
+  const restoreDeletedTask = async (task) => {
+    try {
+      await addTask(task);
+      toast.success('Task restored');
+    } catch (error) {
+      console.error("Restore after delete failed:", error);
+      toast.error('Could not restore the task');
+    }
+  };
+
   const handleDelete = async (id) => {
     const toastId = toast.loading('Deleting task...');
     const previousTasks = tasks;
+    const deletedTask = tasks.find(t => t.id === id);
 
     try {
       await removeTask(id);
-      toast.success('Task deleted', { id: toastId });
+      toast.dismiss(toastId);
+
+      if (deletedTask) {
+        showUndoToast('Task deleted', () => restoreDeletedTask(deletedTask), '🗑️');
+      } else {
+        toast.success('Task deleted');
+      }
 
     } catch (error) {
       console.error("Delete failed:", error);
@@ -32,7 +61,7 @@ export const useTaskActions = ({
           archived: true
       });
 
-      toast.success("Task archived");
+      showUndoToast('Task archived', () => handleRestore(task), '📦');
     }
     catch(error){
       console.error("Archive failed:", error);
@@ -54,6 +83,8 @@ export const useTaskActions = ({
   };
 
   const handleComplete = async (task) => {
+    const completionDate = new Date().toISOString();
+
     try {
       setTasks(prev =>
         prev.map(t =>
@@ -61,7 +92,7 @@ export const useTaskActions = ({
             ? {
                 ...t,
                 completed: true,
-                completion_date: new Date().toISOString()
+                completion_date: completionDate
               }
             : t
         )
@@ -69,9 +100,14 @@ export const useTaskActions = ({
 
       await editTask(task.id, {
         completed: true,
-        completion_date: new Date().toISOString()
+        completion_date: completionDate
       });
-      toast.success('Task completed');
+
+      showUndoToast(
+        'Task completed',
+        () => handleUndoComplete({ ...task, completed: true, completion_date: completionDate }),
+        '✅'
+      );
 
     } catch (error) {
       console.error("Failed to complete task:", error);

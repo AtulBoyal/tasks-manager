@@ -88,6 +88,31 @@ select pg_temp.expect_error(
   $q$ insert into public.tasks (name, cf_contest_id) values ('dup', 2000) $q$,
   'duplicate contest rejected');
 
+-- Undo after delete: the app re-inserts the deleted row with its original id
+insert into public.tasks (name, tags) values ('undo me', '["keep"]');
+
+create temp table undo_snapshot as
+  select * from public.tasks where name = 'undo me';
+grant select on undo_snapshot to authenticated;
+
+delete from public.tasks where name = 'undo me';
+
+insert into public.tasks
+  select * from undo_snapshot;
+
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks t join undo_snapshot s using (id)
+      where t.name = 'undo me' and t.tags = '["keep"]'::jsonb $q$,
+  1, 'deleted task can be restored with its original id');
+
+-- New tasks still get fresh ids after a restore
+insert into public.tasks (name) values ('after undo');
+
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks a, undo_snapshot s
+      where a.name = 'after undo' and a.id <> s.id $q$,
+  1, 'identity keeps issuing new ids after a restore');
+
 -- ---------------------------------------------------------------------------
 -- User B
 -- ---------------------------------------------------------------------------
