@@ -132,7 +132,7 @@ function LoginScreen({
               onClick={signInWithGoogle}
               className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-700 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-600 py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
             >
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              <img src="/google-logo.svg" alt="" aria-hidden="true" className="w-5 h-5" />
               Sign in with Google
             </button>
           </div>
