@@ -6,7 +6,6 @@ function TaskForm({
   factor, setFactor,
   lastDate, setLastDate,
   startDate, setStartDate,
-  todayDate,
   currentTagInput, setCurrentTagInput, handleAddTag,
   taskTags, setTaskTags,
   taskLinks, setTaskLinks,

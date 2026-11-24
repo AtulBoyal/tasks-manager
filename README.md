@@ -107,6 +107,7 @@ Designed with a modular architecture, the project emphasizes scalability, mainta
 ## Frontend
 
 * React
+* Vite
 * React Router
 * Tailwind CSS
 * React Hot Toast
@@ -169,7 +170,7 @@ git clone https://github.com/AtulBoyal/tasks-manager.git
 Move into frontend
 
 ```bash
-cd Tasks_Manager/frontend
+cd tasks-manager/frontend
 ```
 
 Install dependencies
@@ -178,28 +179,30 @@ Install dependencies
 npm install
 ```
 
-Create a `.env` file
+Create a `.env.local` file in `frontend/`
 
 ```env
-REACT_APP_SUPABASE_URL=YOUR_SUPABASE_URL
-REACT_APP_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
-Run locally
+Run locally (http://localhost:3000)
 
 ```bash
-npm start
+npm run dev
 ```
 
-Build production version
+Build and preview the production version
 
 ```bash
 npm run build
+npm run preview
 ```
 
-Run tests
+Lint and run tests
 
 ```bash
+npm run lint
 npm test
 ```
 

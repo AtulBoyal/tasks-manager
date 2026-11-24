@@ -17,7 +17,7 @@ root.render(
 
 // Registered here rather than in an inline <script> so the Content Security
 // Policy can forbid inline scripts. Production only, to avoid caching during dev.
-if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((error) => {
       console.error('Service Worker registration failed:', error);

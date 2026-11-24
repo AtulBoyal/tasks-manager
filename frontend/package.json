@@ -2,36 +2,26 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/user-event": "^13.5.0",
     "@vercel/analytics": "^1.6.1",
-    "axios": "^1.10.0",
     "lucide-react": "^1.22.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.6.0",
-    "react-router-dom": "^7.15.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "react-router-dom": "^7.15.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "vitest",
     "dev": "vite",
-    "eject": "react-scripts eject",
+    "start": "vite",
+    "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
@@ -46,12 +36,20 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.8",
+    "globals": "^17.14.0",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
+    "vite": "^8.0.10",
     "vitest": "^4.1.6"
   }
 }

@@ -42,7 +42,7 @@ const write = (key, value) => {
     localStorage.setItem(key, value);
   } catch (error) {
     console.error('Vault storage write failed:', error);
-    throw new Error('Could not save to this device. Is storage blocked?');
+    throw new Error('Could not save to this device. Is storage blocked?', { cause: error });
   }
 };
 
