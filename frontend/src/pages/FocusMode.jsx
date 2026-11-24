@@ -1,12 +1,9 @@
 import MainLayout from '../layouts/MainLayout';
 import { getLocalDateString } from '../utils/formatters';
+import { useTaskContext } from '../context/TaskContext';
 
-export default function FocusMode({
-  tasks = [],
-  isDarkMode,
-  setIsDarkMode,
-  handleComplete
-}) {
+export default function FocusMode() {
+  const { tasks, handleComplete } = useTaskContext();
 
   const today = getLocalDateString();
 
@@ -48,10 +45,7 @@ export default function FocusMode({
         );
 
   return (
-    <MainLayout
-      isDarkMode={isDarkMode}
-      setIsDarkMode={setIsDarkMode}
-    >
+    <MainLayout>
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
 
         <h1 className="text-4xl font-bold text-center text-orange-500 mb-3">

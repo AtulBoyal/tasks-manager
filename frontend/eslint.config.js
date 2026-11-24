@@ -25,7 +25,7 @@ export default defineConfig([
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true, allowExportNames: ['useTaskContext', 'useVault'] }
+        { allowConstantExport: true, allowExportNames: ['useTaskContext', 'useVault', 'useTheme'] }
       ],
       // JSX usage isn't visible to core no-unused-vars without eslint-plugin-react
       'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' }]

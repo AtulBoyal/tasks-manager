@@ -1,62 +1,62 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TaskForm from '../components/TaskForm';
 import TaskTable from '../components/TaskTable';
 import FilterBar from '../components/FilterBar';
 import ConsistencyHeatmap from '../components/ConsistencyHeatmap';
-import QuickAddModal from '../components/QuickAddModal';
 import MainLayout from '../layouts/MainLayout';
 import SectionCard from '../components/ui/SectionCard';
 import SectionTitle from '../components/ui/SectionTitle';
+import { useTaskContext } from '../context/TaskContext';
+import { useTaskFilters } from '../hooks/useTaskFilters';
+import { formatDate, getFactorClass, getLocalDateString } from '../utils/formatters';
 
-export default function Dashboard({
-  isDarkMode,
-  setIsDarkMode,
+const isRecurring = (task) => task.recurrence && task.recurrence !== 'none';
 
-  tasks,
+export default function Dashboard() {
+  const {
+    tasks,
+    form,
+    handleInlineUpdate,
+    handleDelete,
+    handleComplete,
+    handleUndoComplete,
+    handleToggleSubtask,
+    handleArchive
+  } = useTaskContext();
 
-  taskFormProps,
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterFactor, setFilterFactor] = useState('All');
+  const [filterDate, setFilterDate] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('Active');
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  searchQuery,
-  setSearchQuery,
+  const { filteredActiveTasks, filteredCompletedTasks } =
+    useTaskFilters({ tasks, filterStatus, filterFactor, filterDate, searchQuery });
 
-  filterStatus,
-  setFilterStatus,
+  const todayDate = getLocalDateString();
 
-  filterFactor,
-  setFilterFactor,
+  const activeTableProps = {
+    isCompleted: false,
+    targetDate: filterDate || todayDate,
+    formatDate,
+    getFactorClass,
+    handleInlineUpdate,
+    handleEdit: form.handleEdit,
+    handleDelete,
+    handleComplete,
+    handleToggleSubtask,
+    handleUndoComplete,
+    handleArchive
+  };
 
-  filterDate,
-  setFilterDate,
+  const habitTasks = filteredActiveTasks.filter(isRecurring);
+  const oneOffTasks = filteredActiveTasks.filter(task => !isRecurring(task));
 
-  filteredActiveTasks,
-  filteredCompletedTasks,
-
-  todayDate,
-
-  formatDate,
-  getFactorClass,
-
-  handleInlineUpdate,
-  handleEdit,
-  handleDelete,
-  handleComplete,
-  handleUndoComplete,
-  handleToggleSubtask,
-  handleArchive,
-
-  showCompleted,
-  setShowCompleted,
-
-  isQuickAddOpen,
-  setIsQuickAddOpen,
-
-  handleQuickAdd
-}) {
   return (
-    <MainLayout isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode}>
+    <MainLayout>
 
       <ConsistencyHeatmap tasks={tasks} />
-      <TaskForm {...taskFormProps} />
+      <TaskForm {...form} />
 
       <SectionCard>
 
@@ -73,31 +73,13 @@ export default function Dashboard({
 
         {(filterStatus === 'Active' || filterStatus === 'All') && (
           <>
-            {filteredActiveTasks.some(
-              t => t.recurrence && t.recurrence !== 'none'
-            ) && (
+            {habitTasks.length > 0 && (
               <div className="mb-8">
                 <h2 className="text-center font-extrabold text-[1.5rem] text-[#cc6000] dark:text-orange-500 mb-2 flex items-center justify-center gap-2">
                   <span>🔁</span> Daily Habits
                 </h2>
 
-                <TaskTable
-                  tasks={filteredActiveTasks.filter(
-                    t => t.recurrence && t.recurrence !== 'none'
-                  )}
-                  isCompleted={false}
-                  todayDate={todayDate}
-                  targetDate={filterDate || todayDate}
-                  formatDate={formatDate}
-                  getFactorClass={getFactorClass}
-                  handleInlineUpdate={handleInlineUpdate}
-                  handleEdit={handleEdit}
-                  handleDelete={handleDelete}
-                  handleComplete={handleComplete}
-                  handleToggleSubtask={handleToggleSubtask}
-                  handleUndoComplete={handleUndoComplete}
-                  handleArchive={handleArchive}
-                />
+                <TaskTable tasks={habitTasks} {...activeTableProps} />
               </div>
             )}
 
@@ -105,23 +87,7 @@ export default function Dashboard({
               Active Tasks
             </SectionTitle>
 
-            <TaskTable
-              tasks={filteredActiveTasks.filter(
-                t => !t.recurrence || t.recurrence === 'none'
-              )}
-              isCompleted={false}
-              todayDate={todayDate}
-              targetDate={filterDate || todayDate}
-              formatDate={formatDate}
-              getFactorClass={getFactorClass}
-              handleInlineUpdate={handleInlineUpdate}
-              handleEdit={handleEdit}
-              handleDelete={handleDelete}
-              handleComplete={handleComplete}
-              handleToggleSubtask={handleToggleSubtask}
-              handleUndoComplete={handleUndoComplete}
-              handleArchive={handleArchive}
-            />
+            <TaskTable tasks={oneOffTasks} {...activeTableProps} />
           </>
         )}
       </SectionCard>
@@ -157,14 +123,13 @@ export default function Dashboard({
             )}
           </div>
 
-          {((filterStatus === 'All' ||
-            filterStatus === 'Completed') ||
-            (filterStatus === 'Active' &&
-              showCompleted)) && (
-                <TaskTable
-                tasks={filteredCompletedTasks}
-                isCompleted={true}
-                formatDate={formatDate}
+          {(filterStatus === 'All' ||
+            filterStatus === 'Completed' ||
+            (filterStatus === 'Active' && showCompleted)) && (
+            <TaskTable
+              tasks={filteredCompletedTasks}
+              isCompleted={true}
+              formatDate={formatDate}
               getFactorClass={getFactorClass}
               handleUndoComplete={handleUndoComplete}
               handleToggleSubtask={handleToggleSubtask}
@@ -173,13 +138,6 @@ export default function Dashboard({
           )}
         </SectionCard>
       )}
-
-      <QuickAddModal
-        isOpen={isQuickAddOpen}
-        onClose={() => setIsQuickAddOpen(false)}
-        onQuickAdd={handleQuickAdd}
-        isDarkMode={isDarkMode}
-      />
     </MainLayout>
   );
-};
+}

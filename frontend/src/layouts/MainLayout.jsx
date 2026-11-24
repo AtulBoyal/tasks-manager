@@ -2,18 +2,11 @@ import Header from '../components/Header';
 import Navbar from '../components/Navbar';
 import FloatingDeveloperCard from "../components/FloatingDeveloperCard";
 
-export default function MainLayout({
-  children,
-  isDarkMode,
-  setIsDarkMode
-}) {
+export default function MainLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col items-center w-screen overflow-x-hidden">
-      
-      <Header
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
-      />
+
+      <Header />
 
       <Navbar />
 

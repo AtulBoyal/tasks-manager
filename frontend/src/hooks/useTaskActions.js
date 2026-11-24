@@ -1,4 +1,5 @@
 import toast from "react-hot-toast";
+import { generateAutoTags } from "../utils/tagEngine";
 
 export const useTaskActions = ({
   tasks,
@@ -6,7 +7,7 @@ export const useTaskActions = ({
   addTask,
   editTask,
   removeTask,
-  session
+  userId
 }) => {
 
   const handleDelete = async (id) => {
@@ -162,14 +163,14 @@ export const useTaskActions = ({
 
   // Quick Add creates a plain task from just a title. It must not pick up
   // links/subtasks/recurrence from the half-filled main form.
-  const handleQuickAdd = async ({ newTitle, generateAutoTags }) => {
-    const name = newTitle.trim();
+  const handleQuickAdd = async (title) => {
+    const name = title.trim();
     if (!name) return;
 
     const smartTags = generateAutoTags(name, []);
 
     const newTask = {
-      user_id: session?.user?.id,
+      user_id: userId,
       name,
       factor: 'Normal',
       last_date: null,
