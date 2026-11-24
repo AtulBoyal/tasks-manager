@@ -137,4 +137,50 @@ select pg_temp.expect_count(
   $q$ select 1 from public.tasks where user_id = '00000000-0000-0000-0000-00000000000a' $q$,
   0, 'deleting a user deletes their tasks');
 
+-- ---------------------------------------------------------------------------
+-- Date columns (seeded legacy rows: tests/seed/20261124000200_convert_task_dates.sql)
+-- ---------------------------------------------------------------------------
+select pg_temp.expect_count(
+  $q$ select 1 from information_schema.columns
+      where table_name = 'tasks'
+        and ((column_name = 'last_date' and data_type = 'date')
+          or (column_name = 'completion_date' and data_type = 'timestamp with time zone')) $q$,
+  2, 'last_date is date, completion_date is timestamptz');
+
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks where name = 'legacy dated'
+        and last_date = date '2026-11-24'
+        and completion_date = timestamptz '2026-11-24T10:15:30.123Z' $q$,
+  1, 'legacy ISO values converted exactly');
+
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks where name = 'legacy blank'
+        and last_date is null and completion_date is null $q$,
+  1, 'legacy empty strings became NULL');
+
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks where name = 'legacy padded'
+        and last_date = date '2026-01-05'
+        and completion_date = timestamptz '2026-01-05T00:00:00Z' $q$,
+  1, 'legacy padded / date-only values converted');
+
+-- The app compares last_date as a 'YYYY-MM-DD' string, so the API format matters
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks where name = 'legacy dated'
+        and to_jsonb(last_date) = '"2026-11-24"'::jsonb $q$,
+  1, 'last_date is serialised as YYYY-MM-DD');
+
+select pg_temp.expect_error(
+  $q$ insert into public.tasks (name, user_id, last_date)
+      values ('bad date', '00000000-0000-0000-0000-00000000000b', '2026-02-30') $q$,
+  'impossible dates rejected');
+
+insert into public.tasks (name, user_id, last_date, completion_date)
+  values ('app write', '00000000-0000-0000-0000-00000000000b', '2026-11-24', '2026-11-24T18:45:00.000Z');
+
+select pg_temp.expect_count(
+  $q$ select 1 from public.tasks where name = 'app write'
+        and completion_date = timestamptz '2026-11-24T18:45:00Z' $q$,
+  1, 'app''s ISO writes accepted');
+
 \echo 'All database tests passed'

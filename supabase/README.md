@@ -6,12 +6,18 @@ The Supabase (Postgres) schema for TaskVault, kept as ordered SQL migrations.
 supabase/
 ├── migrations/
 │   ├── 20261124000000_baseline_schema.sql          # schema as it was in production
-│   └── 20261124000100_harden_tasks_and_policies.sql
+│   ├── 20261124000100_harden_tasks_and_policies.sql
+│   └── 20261124000200_convert_task_dates.sql
 └── tests/
     ├── supabase_stub.sql   # stand-ins for Supabase's auth schema, roles, publication
-    ├── rls.test.sql        # RLS and constraint assertions
+    ├── seed/               # data inserted just before the migration of the same name
+    ├── rls.test.sql        # RLS, constraint and data-conversion assertions
     └── run.sh              # applies everything to an empty Postgres and runs the tests
 ```
+
+To test a migration that converts existing data, add `tests/seed/<same filename>.sql`
+with rows in the old format; `run.sh` inserts them right before that migration runs,
+and `rls.test.sql` can then assert how they were converted.
 
 Migrations run in filename order. Never edit a migration that has been applied
 to production; add a new one instead.

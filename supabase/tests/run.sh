@@ -17,6 +17,13 @@ echo "Applying Supabase stub"
 psql_run -f tests/supabase_stub.sql
 
 for migration in migrations/*.sql; do
+  # Optional data seeded just before a migration, to test data conversions
+  seed="tests/seed/$(basename "$migration")"
+  if [ -f "$seed" ]; then
+    echo "Seeding $seed"
+    psql_run --single-transaction -f "$seed"
+  fi
+
   echo "Applying $migration"
   psql_run --single-transaction -f "$migration"
 done

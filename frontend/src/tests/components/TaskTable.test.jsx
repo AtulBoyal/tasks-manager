@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import TaskTable from '../../components/TaskTable';
 
 const mockTasks = [
@@ -37,5 +37,29 @@ describe('TaskTable', () => {
     expect(
       screen.getByText('Build React App')
     ).toBeInTheDocument();
+  });
+
+  it('clearing the inline deadline saves null, not an empty string', () => {
+    const handleInlineUpdate = vi.fn();
+
+    const { container } = render(
+      <TaskTable
+        tasks={mockTasks}
+        isCompleted={false}
+        targetDate={'2026-05-20'}
+        formatDate={(d) => d}
+        getFactorClass={() => ''}
+        handleInlineUpdate={handleInlineUpdate}
+        handleEdit={vi.fn()}
+        handleDelete={vi.fn()}
+        handleComplete={vi.fn()}
+        handleToggleSubtask={vi.fn()}
+      />
+    );
+
+    const dateInput = container.querySelector('input[type="date"]');
+    fireEvent.change(dateInput, { target: { value: '' } });
+
+    expect(handleInlineUpdate).toHaveBeenCalledWith(1, 'last_date', null);
   });
 });
