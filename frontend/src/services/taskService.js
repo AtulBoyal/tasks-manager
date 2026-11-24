@@ -51,9 +51,11 @@ export const taskService = {
       .select('id')
       .eq('user_id', userId)
       .eq('cf_contest_id', contestId)
-      .maybeSingle();
+      .limit(1);
 
     if (error) throw error;
-    return !!data;
+    // limit(1) rather than maybeSingle(): maybeSingle() errors if older
+    // duplicate contest rows already exist.
+    return data.length > 0;
   },
 };
