@@ -5,7 +5,8 @@ import { Toaster } from 'react-hot-toast';
 import FocusMode from './pages/FocusMode';
 
 import { generateAutoTags } from './utils/tagEngine';
-import { formatDate, getFactorClass } from './utils/formatters';
+import { formatDate, getFactorClass, getLocalDateString } from './utils/formatters';
+import { taskService } from './services/taskService';
 
 import { useAuth } from './hooks/useAuth';
 import { useTasks } from './hooks/useTasks';
@@ -41,7 +42,10 @@ function App() {
   const {isLocallyUnlocked, enteredPassword, setEnteredPassword, isLoading, handleUnlock} = 
   useVaultLock(session);
 
-  const {tasks, setTasks, fetchTasks, addTask, editTask, removeTask} = useTasks(session?.user?.id, isLocallyUnlocked);
+  const userId = session?.user?.id;
+
+  // useTasks fetches on unlock itself; no separate fetch effect needed here.
+  const {tasks, setTasks, hasLoaded, addTask, editTask, removeTask} = useTasks(userId, isLocallyUnlocked);
 
   const {taskName, setTaskName, factor, setFactor, lastDate,  setLastDate, startDate, setStartDate, taskLinks, setTaskLinks, taskTags, setTaskTags, currentTagInput, setCurrentTagInput, subtasks, setSubtasks, currentSubtaskInput, setCurrentSubtaskInput, recurrence, setRecurrence, editingTaskId, setEditingTaskId, resetForm} = useTaskForm();
 
@@ -53,9 +57,6 @@ function App() {
 
   const [showResetPinModal, setShowResetPinModal] = useState(false);
 
-
-  useEffect(() => {if (isLocallyUnlocked && session?.user?.id) {fetchTasks();}}, [isLocallyUnlocked, session, fetchTasks]);
-  
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -79,22 +80,12 @@ function App() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const {filteredActiveTasks, filteredCompletedTasks} = 
   useTaskFilters({tasks, filterStatus, filterFactor, filterDate, searchQuery});
-  useRealtimeTasks({isLocallyUnlocked, setTasks});
-  useRecurringTasks({tasks, setTasks, editTask});
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (let registration of registrations) {
-          registration.unregister();
-        }
-      });
-    }
-  }, []);
+  useRealtimeTasks({isLocallyUnlocked, setTasks, userId});
+  useRecurringTasks({tasks, editTask, userId, hasLoaded});
 
   useKeyboardShortcuts({isLocallyUnlocked, setIsQuickAddOpen});
 
-  const todayDate = new Date().toISOString().split('T')[0];
+  const todayDate = getLocalDateString();
 
   const handleForgotPin = () => {
     setShowResetPinModal(true);
@@ -124,6 +115,7 @@ function App() {
   }, [isDarkMode]);
 
   const existingContestIds = React.useRef(new Set());
+  const isContestSyncRunning = React.useRef(false);
 
   useEffect(() => {
     existingContestIds.current = new Set(
@@ -134,9 +126,16 @@ function App() {
   }, [tasks]);
 
   useEffect(() => {
-    if (!isLocallyUnlocked) return;
+    if (!isLocallyUnlocked || !userId) return;
 
     if (!profile?.codeforces_sync) return;
+
+    // Wait for the user's tasks to load, otherwise the dedupe set is empty
+    // and every upcoming contest gets inserted again.
+    if (!hasLoaded) return;
+
+    if (isContestSyncRunning.current) return;
+    isContestSyncRunning.current = true;
 
     const fetchContests = async () => {
       try {
@@ -151,12 +150,12 @@ function App() {
 
             const contestName = `🏆 Codeforces: ${contest.name}`;
             const contestDateObj = new Date(contest.startTimeSeconds * 1000);
-            const contestDateStr = contestDateObj.toISOString().split('T')[0];
+            const contestDateStr = getLocalDateString(contestDateObj);
             const timeString = contestDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
             const newTask = {
               id: Date.now() + index,
-              user_id: session?.user?.id,
+              user_id: userId,
               cf_contest_id: contest.id,
               name: contestName,
               factor: 'Urgent',
@@ -185,8 +184,12 @@ function App() {
               ]
             };
               
-            try{
-              if (existingContestIds.current.has(contest.id)) continue;
+            try {
+              // Another device may have added it since our tasks were loaded.
+              if (await taskService.contestExists(userId, contest.id)) {
+                existingContestIds.current.add(contest.id);
+                continue;
+              }
               await addTask(newTask);
               existingContestIds.current.add(contest.id);
             }
@@ -197,11 +200,13 @@ function App() {
         }
       } catch (error) {
         console.error("Failed to fetch Codeforces contests", error);
+      } finally {
+        isContestSyncRunning.current = false;
       }
     };
 
     fetchContests();
-  }, [isLocallyUnlocked, profile?.codeforces_sync, addTask, session?.user?.id]);
+  }, [isLocallyUnlocked, hasLoaded, profile?.codeforces_sync, addTask, userId]);
 
   const handleAddTag = (e) => {
     e.preventDefault();
@@ -215,8 +220,8 @@ function App() {
     
     const cleanTaskName = taskName.trim();
     if (!cleanTaskName) {
-      alert("Please enter a task name.");
-      return; 
+      toast.error("Please enter a task name.");
+      return;
     }
 
     const smartTags = generateAutoTags(cleanTaskName, taskTags);
@@ -234,18 +239,18 @@ function App() {
           recurrence
         });
         toast.success('Task updated');
-
+        // Only clear the form on success so a failed save doesn't lose edits.
+        resetForm();
       } catch (error) {
         console.error("Failed to update task:", error);
+        toast.error('Failed to update task');
       }
-
-      resetForm();
 
       return;
     } else {
       const newTask = {
         id: Date.now(),
-        user_id: session?.user?.id,
+        user_id: userId,
         name: cleanTaskName,
         factor: factor || 'Normal',
         last_date: lastDate || null,
@@ -258,10 +263,14 @@ function App() {
         subtasks: Array.isArray(subtasks) ? subtasks : []
       };
 
-      await addTask(newTask);
-      toast.success('Task created successfully');
-
-      resetForm();
+      try {
+        await addTask(newTask);
+        toast.success('Task created successfully');
+        resetForm();
+      } catch (error) {
+        console.error("Failed to create task:", error);
+        toast.error('Failed to create task');
+      }
 
       return;
     }
@@ -384,9 +393,6 @@ function App() {
                     handleQuickAdd={(title) =>
                       handleQuickAdd({
                         newTitle: title,
-                        recurrence,
-                        taskLinks,
-                        subtasks,
                         generateAutoTags
                       })
                     }
@@ -399,6 +405,8 @@ function App() {
               path="/settings"
               element={
                 <Settings
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
                   session={session}
                   profile={profile}
                   updateProfile={updateProfile}
