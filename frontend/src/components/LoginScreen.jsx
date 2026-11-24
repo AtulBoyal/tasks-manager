@@ -38,8 +38,23 @@ function CreatePinForm({ onCreatePin, isLoading }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        Create a Vault PIN for this device ({PIN_MIN_LENGTH}-{PIN_MAX_LENGTH} characters).
+      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        Create a Vault PIN for this device
+      </p>
+
+      <div className="text-left text-xs leading-5 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-1">
+        <p>
+          This PIN locks Tasks Manager <span className="font-semibold">on this device only</span>.
+          Your tasks are protected by your Google account.
+        </p>
+        <p>
+          Using another device? You'll set a PIN there too. Forgot it? Sign in
+          with Google again to create a new one.
+        </p>
+      </div>
+
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        {PIN_MIN_LENGTH}–{PIN_MAX_LENGTH} characters
       </p>
 
       <input
