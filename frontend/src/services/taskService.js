@@ -23,6 +23,16 @@ export const taskService = {
     return data;
   },
 
+  async createTasks(tasks) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert(tasks)
+      .select();
+
+    if (error) throw error;
+    return data;
+  },
+
   async updateTask(taskId, updates) {
     const { data, error } = await supabase
       .from('tasks')
